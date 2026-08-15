@@ -1,0 +1,12 @@
+{
+  "shape": {
+    "Capsule": {
+      "radius": 0.4,
+      "height": 1.8
+    }
+  },
+  "eyes": {
+    "height": 1.6,
+    "offset": 0.0
+  }
+}

@@ -1,0 +1,438 @@
+{
+  "brush_list": [
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Primary",
+          "primitive": "Cuboid"
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -8.0,
+            0.0,
+            -8.0
+          ],
+          "max": [
+            8.0,
+            0.25,
+            8.0
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Spawn": {
+          "group": 0
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -0.25,
+            0.25,
+            -0.25
+          ],
+          "max": [
+            0.25,
+            0.5,
+            0.25
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Spawn": {
+          "group": 1
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -8.0,
+            0.25,
+            -16.0
+          ],
+          "max": [
+            8.0,
+            4.0,
+            -12.0
+          ]
+        },
+        "facing": [
+          0.0,
+          -1.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Primary",
+          "primitive": "Cuboid"
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -8.0,
+            0.25,
+            -16.25
+          ],
+          "max": [
+            8.0,
+            4.0,
+            -16.0
+          ]
+        },
+        "facing": [
+          0.0,
+          -1.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid",
+          "exclude": [
+            {
+              "Attack": 255
+            }
+          ]
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -8.0,
+            0.0,
+            -16.25
+          ],
+          "max": [
+            8.0,
+            0.25,
+            -12.0
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid",
+          "exclude": [
+            {
+              "Attack": 255
+            }
+          ]
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -8.25,
+            0.0,
+            -16.25
+          ],
+          "max": [
+            -8.0,
+            4.0,
+            -12.0
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid",
+          "exclude": [
+            {
+              "Attack": 255
+            }
+          ]
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            8.0,
+            0.0,
+            -16.25
+          ],
+          "max": [
+            8.25,
+            4.0,
+            -12.0
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid",
+          "exclude": [
+            {
+              "Attack": 255
+            }
+          ]
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -8.25,
+            4.0,
+            -16.25
+          ],
+          "max": [
+            8.25,
+            4.25,
+            -12.0
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid",
+          "exclude": [
+            {
+              "Attack": 255
+            }
+          ]
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -8.25,
+            0.0,
+            -12.0
+          ],
+          "max": [
+            8.25,
+            4.25,
+            -11.75
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid",
+          "exclude": [
+            {
+              "Attack": 255
+            }
+          ]
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -8.25,
+            0.0,
+            -8.25
+          ],
+          "max": [
+            8.25,
+            4.0,
+            -8.0
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid",
+          "exclude": [
+            {
+              "Attack": 255
+            }
+          ]
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -8.25,
+            0.0,
+            8.0
+          ],
+          "max": [
+            8.25,
+            4.0,
+            8.25
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid",
+          "exclude": [
+            {
+              "Attack": 255
+            }
+          ]
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -8.25,
+            0.0,
+            -8.0
+          ],
+          "max": [
+            -8.0,
+            4.0,
+            8.0
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid",
+          "exclude": [
+            {
+              "Attack": 255
+            }
+          ]
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            8.0,
+            0.0,
+            -8.0
+          ],
+          "max": [
+            8.25,
+            4.0,
+            8.0
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Spawn": {
+          "group": 2
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -0.5,
+            0.25,
+            -0.5
+          ],
+          "max": [
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    }
+  ]
+}

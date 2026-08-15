@@ -1,0 +1,76 @@
+{
+  "level": "#import ../levels/track.json",
+  "player": {
+    "character": "#import ../character/capsule.json",
+    "movement": "#import ../movement/static.json"
+  },
+  "weapon": "#import ../weapon/auto.json",
+  "timeout_delay": 2.0,
+  "challenge": {
+    "efficiency": {
+      "target": 0.6,
+      "window": 20.0
+    }
+  },
+  "bot_template": {
+    "spawn_rules": {
+      "limit": 1
+    },
+    "health": "Infinity",
+    "character": "#import ../character/capsule.json",
+    "movement": "#import ../movement/quake.json",
+    "size_scaling": 0.5,
+    "time_scaling": 0.5,
+    "driver": {
+      "follow": {
+        "target": "Player",
+        "distance": {
+          "min": 3.0,
+          "max": 5.0
+        }
+      },
+      "dodge_layers": [
+        [
+          {
+            "weight": 1.0,
+            "value": [-1.0, 0.0, 0.0],
+            "min": 0.5,
+            "max": 1.0
+          },
+          {
+            "weight": 1.0,
+            "value": [1.0, 0.0, 0.0],
+            "min": 0.5,
+            "max": 1.0
+          }
+        ],
+        [
+          {
+            "weight": 1.0,
+            "value": [0.0, 0.0, -1.0],
+            "min": 0.25,
+            "max": 0.5
+          },
+          {
+            "weight": 1.0,
+            "value": [0.0, 0.0, 0.0],
+            "min": 0.5,
+            "max": 1.0
+          },
+          {
+            "weight": 1.0,
+            "value": [0.0, 0.0, 1.0],
+            "min": 0.25,
+            "max": 0.5
+          }
+        ]
+      ],
+      "impulse_layers": [],
+      "unstick": {
+        "min": 0.2,
+        "max": 0.3,
+        "speed_threshold": 0.5
+      }
+    }
+  }
+}

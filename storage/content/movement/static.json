@@ -1,0 +1,15 @@
+{
+  "max_speed": 0.0,
+  "stop_speed": 0.0,
+  "gravity": 0.0,
+  "accelerate": 0.0,
+  "air_accelerate": 0.0,
+  "friction": 0.0,
+  "air_friction": 0.0,
+  "mode": {
+    "Jump": {
+      "speed": 0.0
+    }
+  },
+  "race": false
+}

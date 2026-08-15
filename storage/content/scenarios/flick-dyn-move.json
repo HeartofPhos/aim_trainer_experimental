@@ -1,0 +1,49 @@
+{
+  "level": "#import ../levels/flick.json",
+  "player": {
+    "character": "#import ../character/capsule.json",
+    "movement": "#import ../movement/quake.json"
+  },
+  "weapon": "#import ../weapon/semi-auto.json",
+  "timeout_delay": 2.0,
+  "challenge": {
+    "damage": {
+      "target": 200,
+      "window": 20.0
+    },
+    "collect": {
+      "fill_time": 1.0,
+      "drain_time": 1.0,
+      "speed_threshold": 0.1
+    }
+  },
+  "bot_template": {
+    "spawn_rules": {
+      "limit": 2
+    },
+    "health": 100.0,
+    "character": "#import ../character/sphere.json",
+    "movement": "#import ../movement/flight.json",
+    "size_scaling": 1.0,
+    "time_scaling": 0.0,
+    "driver": {
+      "dodge_layers": [
+        [
+          {
+            "weight": 1.0,
+            "value": "Sphere",
+            "min": 0.1,
+            "max": 10.0
+          }
+        ]
+      ],
+      "impulse_layers": [],
+      "unstick": {
+        "min": 0.2,
+        "max": 0.3,
+        "speed_threshold": 0.75
+      }
+    }
+  },
+  "collectable_template": "#import ../collectable.json"
+}

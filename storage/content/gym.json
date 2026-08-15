@@ -1,0 +1,4 @@
+{
+  "character": "#import ./character/capsule.json",
+  "movement": "#import ./movement/quake.json"
+}

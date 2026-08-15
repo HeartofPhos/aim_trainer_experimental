@@ -1,0 +1,53 @@
+{
+  "spawn_rules": {
+    "limit": 1
+  },
+  "shape": {
+    "Cylinder": {
+      "radius": 4.0,
+      "height": 4.0
+    }
+  },
+  "character": {
+    "shape": {
+      "Cylinder": {
+        "radius": 4.0,
+        "height": 4.0
+      }
+    }
+  },
+  "movement": {
+    "max_speed": 5.0,
+    "stop_speed": 1.5,
+    "gravity": -30.0,
+    "accelerate": 10.0,
+    "air_accelerate": 1.0,
+    "friction": 6.0,
+    "air_friction": 0.0,
+    "mode": {
+      "Jump": {
+        "speed": 10.0
+      }
+    },
+    "race": true
+  },
+  "driver": {
+    "follow": null,
+    "dodge_layers": [
+      [
+        {
+          "weight": 1.0,
+          "value": { "Circle": [0.0, 1.0, 0.0] },
+          "min": 0.5,
+          "max": 1.0
+        }
+      ]
+    ],
+    "impulse_layers": [],
+    "unstick": {
+      "min": 0.2,
+      "max": 0.3,
+      "speed_threshold": 0.5
+    }
+  }
+}

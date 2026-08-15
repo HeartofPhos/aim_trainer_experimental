@@ -1,0 +1,259 @@
+{
+  "brush_list": [
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Primary",
+          "primitive": "Cuboid"
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -12.0,
+            0.0,
+            -16.0
+          ],
+          "max": [
+            12.0,
+            0.25,
+            4.0
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Spawn": {
+          "group": 0
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -0.25,
+            0.25,
+            -0.25
+          ],
+          "max": [
+            0.25,
+            0.5,
+            0.25
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Spawn": {
+          "group": 1
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -10.0,
+            0.25,
+            -12.25
+          ],
+          "max": [
+            10.0,
+            0.5,
+            -11.75
+          ]
+        },
+        "facing": [
+          0.0,
+          -1.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid"
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -12.25,
+            0.0,
+            -16.0
+          ],
+          "max": [
+            -12.0,
+            5.0,
+            4.0
+          ]
+        },
+        "facing": [
+          0.0,
+          -1.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid"
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -12.25,
+            0.0,
+            4.0
+          ],
+          "max": [
+            12.25,
+            5.0,
+            4.25
+          ]
+        },
+        "facing": [
+          0.0,
+          -1.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid"
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            12.0,
+            0.0,
+            -16.0
+          ],
+          "max": [
+            12.25,
+            5.0,
+            4.0
+          ]
+        },
+        "facing": [
+          0.0,
+          -1.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid"
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -12.25,
+            0.0,
+            -16.25
+          ],
+          "max": [
+            12.25,
+            5.0,
+            -16.0
+          ]
+        },
+        "facing": [
+          0.0,
+          -1.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Primary",
+          "primitive": "Cuboid"
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -12.0,
+            0.25,
+            -4.0
+          ],
+          "max": [
+            12.0,
+            0.5,
+            -3.75
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "def": {
+        "Primitive": {
+          "theme": "Invisible",
+          "primitive": "Cuboid",
+          "exclude": [
+            {
+              "Attack": 255
+            }
+          ]
+        }
+      },
+      "transform": {
+        "bounds": {
+          "min": [
+            -12.0,
+            0.5,
+            -4.0
+          ],
+          "max": [
+            12.0,
+            5.0,
+            -3.75
+          ]
+        },
+        "facing": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    }
+  ]
+}

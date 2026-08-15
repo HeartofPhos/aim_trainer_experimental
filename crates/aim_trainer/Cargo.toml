@@ -1,0 +1,14 @@
+[package]
+name = "aim_trainer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+glam = { workspace = true }
+raylib = { workspace = true }
+
+schema = { path = "../schema" }
+ref_asset = { path = "../ref_asset" }
+
+[lints]
+workspace = true

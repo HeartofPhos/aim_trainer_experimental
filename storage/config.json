@@ -1,0 +1,34 @@
+{
+  "display": {
+    "window_mode": "BorderlessFullscreen"
+  },
+  "sensitivity": {
+    "sensitivity": 1.0,
+    "sensitivity_factor": 0.022
+  },
+  "crosshair": {
+    "color": "#00ffff",
+    "size": 8.0
+  },
+  "audio": {
+    "global_volume": 0.5,
+    "shoot": null,
+    "hit": { "path": "audio/hit.wav", "volume": 1.0, "cooldown": 0.0 },
+    "miss": null,
+    "new_highscore": {
+      "path": "audio/highscore.wav",
+      "volume": 1.0,
+      "cooldown": 2.0
+    },
+    "over_highscore": {
+      "path": "audio/over.wav",
+      "volume": 1.0,
+      "cooldown": 1.0
+    },
+    "under_highscore": {
+      "path": "audio/under.wav",
+      "volume": 1.0,
+      "cooldown": 1.0
+    }
+  }
+}

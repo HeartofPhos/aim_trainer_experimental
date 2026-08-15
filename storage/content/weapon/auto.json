@@ -1,0 +1,10 @@
+{
+  "damage": 10.0,
+  "fire_rate": 10.0,
+  "fire_mode": "Automatic",
+  "ammo_max": 0,
+  "ammo_per_shot": 0,
+  "ammo_on_hit": 0,
+  "ammo_on_kill": 0,
+  "reload_time": 0
+}
