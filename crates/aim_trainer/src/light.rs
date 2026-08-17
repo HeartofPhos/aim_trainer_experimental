@@ -1,7 +1,5 @@
 use raylib::prelude::*;
 
-const MAX_LIGHTS: usize = 1;
-
 #[repr(i32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]

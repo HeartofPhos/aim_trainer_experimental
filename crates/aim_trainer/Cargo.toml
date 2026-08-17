@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 glam = { workspace = true }
+glamx = { workspace = true }
+rand = { workspace = true }
 raylib = { workspace = true }
 
 schema = { path = "../schema" }

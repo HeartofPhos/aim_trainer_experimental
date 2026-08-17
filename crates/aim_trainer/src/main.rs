@@ -1,30 +1,22 @@
-use glam::{Mat4, Vec3};
+use crate::{
+    game::{Game, Input},
+    light::{Light, LightShader, LightType},
+};
+use glam::{Mat4, Vec2, Vec3};
 use raylib::prelude::*;
-use schema::Primitive;
+use schema::{Brush, BrushTransform, Primitive};
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
-use crate::light::{Light, LightShader, LightType};
-
+mod game;
 mod light;
 
 fn main() {
-    let (scenario, _): (schema::Scenario, _) =
-        ref_asset::io::read_file(ref_asset::paths::scenario("track-move")).unwrap();
+    let game = Game::new(ref_asset::paths::scenario("track-move"));
 
     let (mut rl, thread) = raylib::init().fullscreen().title("aim_trainer").build();
-
-    let meshes: Vec<_> = scenario
-        .level
-        .brush_list
-        .iter()
-        .filter_map(|b| match &b.def {
-            schema::BrushDef::Primitive {
-                theme,
-                primitive,
-                exclude,
-            } => Some((build_mesh(&thread, primitive), b.transform)),
-            _ => None,
-        })
-        .collect();
 
     let mut light_shader = LightShader::<1>::new(&mut rl, &thread);
     let brightness = Vector4::new(0.1, 0.1, 0.1, 1.0);
@@ -40,53 +32,153 @@ fn main() {
         },
     );
 
-    let mut mat = rl.load_material_default(&thread);
-    mat.set_map_color(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, Color::WHITE);
-    mat.set_shader(light_shader.shader());
+    let mut mat_a = rl.load_material_default(&thread);
+    mat_a.set_map_color(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, Color::WHITE);
+    mat_a.set_shader(light_shader.shader());
+
+    let mut mat_b = rl.load_material_default(&thread);
+    mat_b.set_map_color(
+        ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO,
+        Color::GREEN.alpha(0.1),
+    );
+    mat_b.set_shader(light_shader.shader());
+
+    let draw_brush = build_draw_brush(&thread, mat_a, mat_b);
 
     let mut camera = Camera3D::perspective(
-        Vector3::new(0.0, 2.0, 4.0), // Camera position
-        Vector3::new(0.0, 2.0, 0.0), // Camera looking at point
-        Vector3::new(0.0, 1.0, 0.0), // Camera up vector (rotation towards target)
-        60.0,                        // Camera field-of-view Y
+        Vector3::ZERO, // Camera position
+        Vector3::ZERO, // Camera looking at point
+        Vector3::Y,    // Camera up vector (rotation towards target)
+        60.0,          // Camera field-of-view Y
     );
-
-    let camera_mode = CameraMode::CAMERA_FIRST_PERSON;
 
     rl.disable_cursor();
 
-    while !rl.window_should_close() {
-        let mut d = rl.begin_drawing(&thread);
-        camera.update_camera(camera_mode);
-
-        light_shader.set_view_pos(camera.position);
-
-        d.clear_background(Color::GRAY);
-
-        {
-            let mut c = d.begin_mode3D(camera);
-
-            for (mesh, transform) in &meshes {
-                let matrix = Matrix::compose(
-                    vec_to_vector(transform.bounds.center()),
-                    Quaternion::identity(),
-                    vec_to_vector(transform.bounds.extents()),
-                );
-
-                c.draw_mesh(mesh, mat.clone(), matrix);
+    game_loop(
+        rl,
+        Duration::from_secs_f32(1.0 / 256.0),
+        game,
+        Input::default(),
+        |rl, game, input, elapsed, delta_time| {
+            game.update(delta_time, *input);
+            *input = Input::default();
+        },
+        |rl, game, input, elapsed, delta_time| {
+            fn dir(neg: bool, pos: bool) -> f32 {
+                match (neg, pos) {
+                    (true, false) => -1.0,
+                    (false, true) => 1.0,
+                    _ => 0.0,
+                }
             }
+            input.look += Vec2::from(rl.get_mouse_delta());
+            input.movement_dir = Vec3 {
+                x: dir(
+                    rl.is_key_down(KeyboardKey::KEY_A),
+                    rl.is_key_down(KeyboardKey::KEY_D),
+                ),
+                y: dir(
+                    rl.is_key_down(KeyboardKey::KEY_LEFT_CONTROL),
+                    rl.is_key_down(KeyboardKey::KEY_SPACE),
+                ),
+                z: dir(
+                    rl.is_key_down(KeyboardKey::KEY_W),
+                    rl.is_key_down(KeyboardKey::KEY_S),
+                ),
+            }
+            .normalize_or(Vec3::ZERO);
+
+            let mut d = rl.begin_drawing(&thread);
+
+            let Some(player) = game.player() else {
+                return;
+            };
+
+            camera.target = (player.translation + player.rotation * Vec3::NEG_Z).into();
+            camera.position = player.translation.into();
+            light_shader.set_view_pos(camera.position);
+
+            d.clear_background(Color::GRAY);
+
+            {
+                let mut c = d.begin_mode3D(camera);
+
+                for brush in game.level_brushes() {
+                    draw_brush(&mut c, brush);
+                }
+            }
+
+            d.draw_fps(10, 10);
+        },
+    );
+}
+
+fn game_loop<S, I>(
+    mut rl: RaylibHandle,
+    timestep: Duration,
+    mut state: S,
+    mut input_state: I,
+    mut integrate: impl FnMut(&mut RaylibHandle, &mut S, &mut I, Duration, Duration),
+    mut render: impl FnMut(&mut RaylibHandle, &S, &mut I, Duration, Duration),
+) {
+    let mut elapsed = Duration::ZERO;
+    let mut accumulator = Duration::ZERO;
+
+    let mut current_time = Instant::now();
+
+    while !rl.window_should_close() {
+        let new_time = Instant::now();
+        let delta_time = new_time.duration_since(current_time);
+        current_time = new_time;
+
+        accumulator += delta_time;
+
+        while accumulator > timestep {
+            integrate(&mut rl, &mut state, &mut input_state, elapsed, timestep);
+            accumulator -= timestep;
+            elapsed += timestep;
         }
 
-        d.draw_fps(10, 10);
+        render(&mut rl, &state, &mut input_state, elapsed, delta_time);
     }
 }
 
-fn vec_to_vector(v: Vec3) -> Vector3 {
-    Vector3 {
-        x: v.x,
-        y: v.y,
-        z: v.z,
+fn build_draw_brush(
+    thread: &RaylibThread,
+    mat_a: WeakMaterial,
+    mat_b: WeakMaterial,
+) -> impl Fn(&mut RaylibMode3D<RaylibDrawHandle>, &Brush) {
+    let primitive_lookup = primitive_lookup(thread);
+
+    move |c, brush| {
+        let (mat, mesh) = match &brush.def {
+            schema::BrushDef::Primitive(def) => (&mat_a, primitive_lookup.get(&def.primitive)),
+            schema::BrushDef::Spawn { .. } => (&mat_b, primitive_lookup.get(&Primitive::Cuboid)),
+        };
+
+        if let Some(mesh) = mesh {
+            let matrix = brush_transform_to_matrix(brush.transform);
+            c.draw_mesh(mesh, mat.clone(), matrix);
+        }
     }
+}
+
+fn primitive_lookup(thread: &RaylibThread) -> HashMap<Primitive, Mesh> {
+    let mut lookup = HashMap::new();
+    for primitive in Primitive::iter() {
+        let mesh = build_mesh(thread, primitive);
+        lookup.insert(*primitive, mesh);
+    }
+
+    lookup
+}
+
+fn brush_transform_to_matrix(transform: BrushTransform) -> Matrix {
+    Matrix::compose(
+        transform.bounds.center().into(),
+        Quaternion::identity(),
+        transform.bounds.extents().into(),
+    )
 }
 
 fn build_mesh(thread: &RaylibThread, primitive: &Primitive) -> Mesh {
@@ -156,56 +248,55 @@ fn build_mesh(thread: &RaylibThread, primitive: &Primitive) -> Mesh {
 
             (vertices, indices)
         }
-        // Primitive::Corner => {
-        //     let vertices = vec![
-        //         Vec3::new(0.0, 0.0, 0.0), // 0
-        //         Vec3::new(1.0, 0.0, 0.0), // 1
-        //         Vec3::new(0.0, 0.0, 1.0), // 2
-        //         Vec3::new(0.0, 1.0, 0.0), // 3
-        //     ];
+        Primitive::Corner => {
+            let vertices = vec![
+                Vec3::new(0.0, 0.0, 0.0), // 0
+                Vec3::new(1.0, 0.0, 0.0), // 1
+                Vec3::new(0.0, 0.0, 1.0), // 2
+                Vec3::new(0.0, 1.0, 0.0), // 3
+            ];
 
-        //     #[rustfmt::skip]
-        //         let indices: Vec<_> = vec![
-        //             // back
-        //             0, 3, 1,
-        //             // left
-        //             2, 3, 0,
-        //             // down
-        //             0, 1, 2,
-        //             // forward
-        //             2, 1, 3,
-        //         ];
+            #[rustfmt::skip]
+                let indices: Vec<_> = vec![
+                    // back
+                    0, 3, 1,
+                    // left
+                    2, 3, 0,
+                    // down
+                    0, 1, 2,
+                    // forward
+                    2, 1, 3,
+                ];
 
-        //     (vertices, indices)
-        // }
-        // Primitive::CornerInverse => {
-        //     let vertices = vec![
-        //         Vec3::new(1.0, 0.0, 1.0),
-        //         Vec3::new(0.0, 1.0, 1.0),
-        //         Vec3::new(0.0, 0.0, 1.0),
-        //         Vec3::new(1.0, 1.0, 0.0),
-        //         Vec3::new(1.0, 0.0, 0.0),
-        //         Vec3::new(0.0, 1.0, 0.0),
-        //         Vec3::new(0.0, 0.0, 0.0),
-        //     ];
+            (vertices, indices)
+        }
+        Primitive::CornerInverse => {
+            let vertices = vec![
+                Vec3::new(1.0, 0.0, 1.0),
+                Vec3::new(0.0, 1.0, 1.0),
+                Vec3::new(0.0, 0.0, 1.0),
+                Vec3::new(1.0, 1.0, 0.0),
+                Vec3::new(1.0, 0.0, 0.0),
+                Vec3::new(0.0, 1.0, 0.0),
+                Vec3::new(0.0, 0.0, 0.0),
+            ];
 
-        //     #[rustfmt::skip]
-        //         let indices: Vec<_> = vec![
-        //             4, 3, 0,
-        //             1, 6, 2,
-        //             5, 4, 6,
-        //             0, 6, 4,
-        //             1, 0, 3,
-        //             3, 5, 1,
-        //             2, 0, 1,
-        //             1, 5, 6,
-        //             5, 3, 4,
-        //             0, 2, 6,
-        //         ];
+            #[rustfmt::skip]
+                let indices: Vec<_> = vec![
+                    4, 3, 0,
+                    1, 6, 2,
+                    5, 4, 6,
+                    0, 6, 4,
+                    1, 0, 3,
+                    3, 5, 1,
+                    2, 0, 1,
+                    1, 5, 6,
+                    5, 3, 4,
+                    0, 2, 6,
+                ];
 
-        //     (vertices, indices)
-        // }
-        _ => (Vec::new(), Vec::new()),
+            (vertices, indices)
+        }
     };
 
     let offset = Vec3::NEG_ONE * 0.5;
@@ -228,8 +319,8 @@ fn build_mesh(thread: &RaylibThread, primitive: &Primitive) -> Mesh {
 
     let vertices: Vec<_> = indices.iter().map(|i| vertices[*i as usize]).collect();
 
-    let vertices: Vec<_> = vertices.into_iter().map(vec_to_vector).collect();
-    let normals: Vec<_> = normals.into_iter().map(vec_to_vector).collect();
+    let vertices: Vec<_> = vertices.into_iter().map(Into::into).collect();
+    let normals: Vec<_> = normals.into_iter().map(Into::into).collect();
     let tex: Vec<Vector2> = vertices.iter().map(|_| Vector2::zero()).collect();
 
     match Mesh::gen_mesh(&vertices, &tex)

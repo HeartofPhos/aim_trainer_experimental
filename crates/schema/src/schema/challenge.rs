@@ -5,9 +5,7 @@ use std::time::Duration;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ChallengeProfile {
     pub damage: Option<BufferProfile>,
-    pub damage_scaling: Option<ChallengeScaling>,
     pub efficiency: Option<BufferProfile>,
-    pub efficiency_scaling: Option<ChallengeScaling>,
     pub collect: Option<CollectProfile>,
 }
 

@@ -15,25 +15,31 @@ pub struct Brush {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BrushDef {
-    Primitive {
-        theme: ThemeToken,
-        primitive: Primitive,
-        #[serde(default = "Default::default")]
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        exclude: Vec<Layer>,
-    },
-    Spawn {
-        group: SpawnGroup,
-    },
+    Primitive(PrimitiveDef),
+    Spawn(SpawnDef),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrimitiveDef {
+    pub theme: ThemeToken,
+    pub primitive: Primitive,
+    #[serde(default = "Default::default")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub exclude: Vec<Layer>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpawnDef {
+    pub group: SpawnGroup,
 }
 
 impl Default for BrushDef {
     fn default() -> Self {
-        Self::Primitive {
+        Self::Primitive(PrimitiveDef {
             theme: ThemeToken::Primary,
             primitive: Primitive::Cuboid,
             exclude: Default::default(),
-        }
+        })
     }
 }
 
