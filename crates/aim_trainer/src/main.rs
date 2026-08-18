@@ -2,9 +2,9 @@ use crate::{
     game::{Game, Input},
     light::{Light, LightShader, LightType},
 };
-use glam::{Mat4, Vec2, Vec3};
+use bevy_math::prelude::*;
 use raylib::prelude::*;
-use schema::{Brush, BrushTransform, Primitive};
+use schema::{BrushDef, BrushTransform, Primitive};
 use std::{
     collections::HashMap,
     time::{Duration, Instant},
@@ -72,7 +72,7 @@ fn main() {
                 }
             }
             input.look += Vec2::from(rl.get_mouse_delta());
-            input.movement_dir = Vec3 {
+            input.movement = Vec3 {
                 x: dir(
                     rl.is_key_down(KeyboardKey::KEY_A),
                     rl.is_key_down(KeyboardKey::KEY_D),
@@ -90,7 +90,7 @@ fn main() {
 
             let mut d = rl.begin_drawing(&thread);
 
-            let Some(player) = game.player() else {
+            let Ok(player) = game.player() else {
                 return;
             };
 
@@ -103,9 +103,9 @@ fn main() {
             {
                 let mut c = d.begin_mode3D(camera);
 
-                for brush in game.level_brushes() {
-                    draw_brush(&mut c, brush);
-                }
+                game.level_brushes(|brush_def, brush_transform| {
+                    draw_brush(&mut c, brush_def, brush_transform)
+                });
             }
 
             d.draw_fps(10, 10);
@@ -147,18 +147,27 @@ fn build_draw_brush(
     thread: &RaylibThread,
     mat_a: WeakMaterial,
     mat_b: WeakMaterial,
-) -> impl Fn(&mut RaylibMode3D<RaylibDrawHandle>, &Brush) {
+) -> impl Fn(&mut RaylibMode3D<RaylibDrawHandle>, &BrushDef, &BrushTransform) {
     let primitive_lookup = primitive_lookup(thread);
 
-    move |c, brush| {
-        let (mat, mesh) = match &brush.def {
-            schema::BrushDef::Primitive(def) => (&mat_a, primitive_lookup.get(&def.primitive)),
+    move |c, brush_def, brush_transform| {
+        let (mat, mesh) = match brush_def {
+            schema::BrushDef::Primitive { primitive, .. } => {
+                (&mat_a, primitive_lookup.get(primitive))
+            }
             schema::BrushDef::Spawn { .. } => (&mat_b, primitive_lookup.get(&Primitive::Cuboid)),
         };
 
         if let Some(mesh) = mesh {
-            let matrix = brush_transform_to_matrix(brush.transform);
-            c.draw_mesh(mesh, mat.clone(), matrix);
+            c.draw_mesh(
+                mesh,
+                mat.clone(),
+                Matrix::compose(
+                    brush_transform.translation.into(),
+                    brush_transform.rotation.into(),
+                    brush_transform.scale.into(),
+                ),
+            );
         }
     }
 }
@@ -171,14 +180,6 @@ fn primitive_lookup(thread: &RaylibThread) -> HashMap<Primitive, Mesh> {
     }
 
     lookup
-}
-
-fn brush_transform_to_matrix(transform: BrushTransform) -> Matrix {
-    Matrix::compose(
-        transform.bounds.center().into(),
-        Quaternion::identity(),
-        transform.bounds.extents().into(),
-    )
 }
 
 fn build_mesh(thread: &RaylibThread, primitive: &Primitive) -> Mesh {

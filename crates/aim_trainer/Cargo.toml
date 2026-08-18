@@ -4,10 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-glam = { workspace = true }
-glamx = { workspace = true }
+bevy_ecs = { workspace = true }
+bevy_math = { workspace = true }
+derive_more = { workspace = true }
 rand = { workspace = true }
 raylib = { workspace = true }
+thiserror = { workspace = true }
 
 schema = { path = "../schema" }
 ref_asset = { path = "../ref_asset" }

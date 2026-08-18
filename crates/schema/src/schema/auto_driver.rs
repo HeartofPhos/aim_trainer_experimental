@@ -1,4 +1,4 @@
-use glam::Vec3;
+use bevy_math::Vec3;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

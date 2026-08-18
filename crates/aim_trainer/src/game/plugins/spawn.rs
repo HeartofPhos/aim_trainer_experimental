@@ -1,0 +1,137 @@
+use crate::game::{Random, Transform, Update, plugins::SpawnSet, utils::weighted_random};
+use bevy_ecs::prelude::*;
+use bevy_math::prelude::*;
+use rand::Rng;
+use schema::{BrushTransform, SpawnGroup, SpawnRules};
+use std::collections::HashMap;
+
+pub fn plugin(world: &mut World) {
+    world
+        .get_resource_or_init::<Schedules>()
+        .add_systems(Update, spawner.in_set(SpawnSet::Spawn))
+        .add_systems(Update, move_to_spawn.in_set(SpawnSet::Move));
+}
+
+crate::relationships! {
+    crate::relationship!(pub, one_many, SpawnedBy, [], SpawnedList, []);
+}
+
+#[derive(Resource, Default)]
+pub struct SpawnLookup {
+    spawns: HashMap<SpawnGroup, WeightedSpawn>,
+}
+
+#[derive(Default)]
+pub struct WeightedSpawn {
+    total_weight: f32,
+    transforms: Vec<(f32, Mat4)>,
+}
+
+impl SpawnLookup {
+    pub fn push(&mut self, spawn_group: SpawnGroup, transform: BrushTransform) {
+        let weight = Vec3::dot(transform.scale, transform.scale);
+
+        let spawn = self.spawns.entry(spawn_group).or_default();
+
+        spawn.total_weight += weight;
+        spawn.transforms.push((
+            weight,
+            Mat4::from_scale_rotation_translation(
+                transform.scale,
+                transform.rotation,
+                transform.translation,
+            ),
+        ));
+    }
+
+    pub fn get_spawn(
+        &self,
+        group: SpawnGroup,
+        target_extents: Vec3,
+        rng: &mut impl Rng,
+    ) -> Option<(Vec3, Quat)> {
+        let weighted_spawn = self.spawns.get(&group)?;
+
+        let spawn_to_world = weighted_random(
+            weighted_spawn.total_weight,
+            weighted_spawn.transforms.iter().map(|x| (x.0, x.1)),
+            rng,
+        )?;
+
+        let target_to_spawn = spawn_to_world.inverse();
+
+        let extents = target_to_spawn.transform_vector3(target_extents).abs();
+        let spawn_extents = Vec3::splat(0.5);
+
+        let spawn_min = Vec3::min(extents - spawn_extents, Vec3::ZERO);
+        let spawn_max = Vec3::max(spawn_extents - extents, Vec3::ZERO);
+
+        let mut delta = spawn_max - spawn_min;
+
+        delta.x *= rand::random::<f32>();
+        delta.y *= rand::random::<f32>();
+        delta.z *= rand::random::<f32>();
+
+        let translation = spawn_to_world.transform_point3(spawn_min + delta);
+        let rotation = spawn_to_world.to_scale_rotation_translation().1;
+
+        Some((translation, rotation))
+    }
+}
+
+#[derive(Component)]
+pub struct Spawner {
+    pub spawn_rules: SpawnRules,
+    pub spawn_group: SpawnGroup,
+}
+
+#[derive(Component)]
+struct MoveToSpawn;
+
+#[derive(EntityEvent)]
+pub struct Spawned {
+    #[event_target]
+    pub spawner: Entity,
+    pub spawned: Entity,
+}
+
+fn spawner(mut commands: Commands, query: Query<(Entity, &Spawner, Option<&SpawnedList>)>) {
+    for (spawner_entity, spawner, spawned_list) in query {
+        let spawned_count = spawned_list.map(|x| x.entities().len()).unwrap_or(0);
+        for _ in spawned_count..spawner.spawn_rules.limit {
+            let spawned_entity = commands
+                .spawn((SpawnedBy(spawner_entity), MoveToSpawn))
+                .id();
+
+            commands.trigger(Spawned {
+                spawner: spawner_entity,
+                spawned: spawned_entity,
+            });
+        }
+    }
+}
+
+fn move_to_spawn(
+    mut commands: Commands,
+    mut random: ResMut<Random>,
+    spawn_lookup: Res<SpawnLookup>,
+    spawner_query: Query<&Spawner>,
+    query: Query<(Entity, &SpawnedBy), With<MoveToSpawn>>,
+) -> Result {
+    for (entity, spawned_by) in query {
+        let spawner = spawner_query.get(spawned_by.0)?;
+        let (translation, rotation) = spawn_lookup
+            .get_spawn(spawner.spawn_group, Vec3::ZERO, &mut random)
+            .unwrap_or_default();
+
+        commands
+            .entity(entity)
+            .insert(Transform {
+                rotation,
+                translation,
+            })
+            .remove::<MoveToSpawn>();
+    }
+
+    Ok(())
+}

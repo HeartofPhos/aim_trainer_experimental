@@ -1,5 +1,5 @@
 use crate::Layer;
-use glam::{Quat, Vec3};
+use bevy_math::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -15,31 +15,25 @@ pub struct Brush {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BrushDef {
-    Primitive(PrimitiveDef),
-    Spawn(SpawnDef),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PrimitiveDef {
-    pub theme: ThemeToken,
-    pub primitive: Primitive,
-    #[serde(default = "Default::default")]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub exclude: Vec<Layer>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpawnDef {
-    pub group: SpawnGroup,
+    Primitive {
+        theme: ThemeToken,
+        primitive: Primitive,
+        #[serde(default = "Default::default")]
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        exclude: Vec<Layer>,
+    },
+    Spawn {
+        group: SpawnGroup,
+    },
 }
 
 impl Default for BrushDef {
     fn default() -> Self {
-        Self::Primitive(PrimitiveDef {
+        Self::Primitive {
             theme: ThemeToken::Primary,
             primitive: Primitive::Cuboid,
             exclude: Default::default(),
-        })
+        }
     }
 }
 
@@ -48,31 +42,9 @@ pub struct SpawnGroup(pub usize);
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 pub struct BrushTransform {
-    pub bounds: BrushBounds,
-    pub facing: Quat,
-}
-
-#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-pub struct BrushBounds {
-    pub min: Vec3,
-    pub max: Vec3,
-}
-
-impl BrushBounds {
-    pub fn union(&self, rhs: &Self) -> Self {
-        Self {
-            min: Vec3::min(self.min, rhs.min),
-            max: Vec3::max(self.max, rhs.max),
-        }
-    }
-
-    pub fn center(&self) -> Vec3 {
-        (self.min + self.max) * 0.5
-    }
-
-    pub fn extents(&self) -> Vec3 {
-        (self.max - self.min).abs()
-    }
+    pub translation: Vec3,
+    pub rotation: Quat,
+    pub scale: Vec3,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
