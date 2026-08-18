@@ -14,9 +14,15 @@ mod game;
 mod light;
 
 fn main() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
     let game = Game::new(ref_asset::paths::scenario("track-move"));
 
-    let (mut rl, thread) = raylib::init().fullscreen().title("aim_trainer").build();
+    let (mut rl, thread) = raylib::init()
+        .fullscreen()
+        .title("aim_trainer")
+        .log_to_rust()
+        .build();
 
     let mut light_shader = LightShader::<1>::new(&mut rl, &thread);
     let brightness = Vector4::new(0.1, 0.1, 0.1, 1.0);
@@ -324,14 +330,8 @@ fn build_mesh(thread: &RaylibThread, primitive: &Primitive) -> Mesh {
     let normals: Vec<_> = normals.into_iter().map(Into::into).collect();
     let tex: Vec<Vector2> = vertices.iter().map(|_| Vector2::zero()).collect();
 
-    match Mesh::gen_mesh(&vertices, &tex)
+    Mesh::gen_mesh(&vertices, &tex)
         .normals(&normals)
         .build(thread)
-    {
-        Ok(mesh) => mesh,
-        Err(err) => {
-            println!("{:#?}", err);
-            panic!()
-        }
-    }
+        .expect("invalid mesh")
 }

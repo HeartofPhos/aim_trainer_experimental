@@ -10,6 +10,8 @@ derive_more = { workspace = true }
 rand = { workspace = true }
 raylib = { workspace = true }
 thiserror = { workspace = true }
+env_logger = { workspace = true }
+log = { workspace = true }
 
 schema = { path = "../schema" }
 ref_asset = { path = "../ref_asset" }
