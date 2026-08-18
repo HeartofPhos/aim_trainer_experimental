@@ -1,6 +1,5 @@
-use bevy_ecs::prelude::*;
-
 use crate::game::Update;
+use bevy_ecs::prelude::*;
 
 pub mod character_controller;
 pub mod input_driver;

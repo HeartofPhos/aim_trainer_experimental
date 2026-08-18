@@ -1,13 +1,14 @@
+use bevy_ecs::prelude::*;
+use rand::{SeedableRng, rngs::Xoshiro256PlusPlus};
 use std::ops::{Deref, DerefMut};
 
-use bevy_ecs::prelude::*;
-use rand::{SeedableRng, rngs::Xoshiro128PlusPlus};
+type RandImpl = Xoshiro256PlusPlus;
 
 #[derive(Resource)]
-pub struct Random(Xoshiro128PlusPlus);
+pub struct Random(RandImpl);
 
 impl Deref for Random {
-    type Target = Xoshiro128PlusPlus;
+    type Target = RandImpl;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -20,9 +21,9 @@ impl DerefMut for Random {
 }
 
 impl SeedableRng for Random {
-    type Seed = <Xoshiro128PlusPlus as SeedableRng>::Seed;
+    type Seed = <RandImpl as SeedableRng>::Seed;
 
     fn from_seed(seed: Self::Seed) -> Self {
-        Random(Xoshiro128PlusPlus::from_seed(seed))
+        Random(RandImpl::from_seed(seed))
     }
 }
