@@ -6,37 +6,19 @@ use crate::game::{
         movement::{Facing, MovementProfile},
         spawn::{SpawnLookup, Spawned, Spawner},
     },
-    random::Random,
 };
-use bevy_ecs::{prelude::*, schedule::ScheduleLabel};
-use bevy_math::prelude::*;
-use rand::SeedableRng;
+use bevy::{prelude::*, time::TimeUpdateStrategy};
+use bevy_rand::plugin::EntropyPlugin;
 use schema::{SpawnGroup, SpawnRules};
 use std::{path::PathBuf, time::Duration};
 
 mod config;
 mod level;
 mod plugins;
-mod random;
 mod utils;
 
 pub struct Game {
-    world: World,
-}
-
-#[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash, Default)]
-struct Update;
-
-#[derive(Component, Default, Clone, Copy)]
-pub struct Transform {
-    pub translation: Vec3,
-    pub rotation: Quat,
-}
-
-#[derive(Resource, Default)]
-struct Time {
-    elapsed: Duration,
-    delta_time: Duration,
+    app: App,
 }
 
 #[derive(Component)]
@@ -48,53 +30,59 @@ struct Bot;
 #[derive(Event)]
 struct LoadScenario(PathBuf);
 
+pub type GameRng = bevy_rand::prelude::WyRand;
+
 impl Game {
     pub fn new(scenario_path: impl Into<PathBuf>) -> Self {
-        let mut world = World::new();
+        let mut app = App::new();
 
-        world.init_resource::<Time>();
-        world.init_resource::<SpawnLookup>();
-        world.insert_resource(Random::seed_from_u64(0));
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(EntropyPlugin::<GameRng>::with_seed([0; 8]));
+        app.add_plugins(plugins::plugin);
 
-        world.add_observer(load_scenario);
+        app.init_resource::<Time>();
+        app.init_resource::<SpawnLookup>();
 
-        plugins::plugin(&mut world);
+        app.add_observer(load_scenario);
 
-        world.trigger(LoadScenario(scenario_path.into()));
+        app.world_mut().trigger(LoadScenario(scenario_path.into()));
 
-        Self { world }
+        Self { app }
     }
 
     pub fn level_brushes(&self, mut f: impl FnMut(&schema::BrushDef, &schema::BrushTransform)) {
         for (brush_def, brush_transform) in self
-            .world
+            .app
+            .world()
             .try_query::<(&BrushDef, &BrushTransform)>()
             .unwrap()
-            .iter(&self.world)
+            .iter(self.app.world())
         {
             f(brush_def, brush_transform);
         }
     }
 
     pub fn update(&mut self, delta_time: Duration, input: Input) {
-        let mut time = self.world.resource_mut::<Time>();
-        time.elapsed += delta_time;
-        time.delta_time = delta_time;
-        self.world.insert_resource(input);
+        let mut time = self.app.world_mut().resource_mut::<TimeUpdateStrategy>();
+        *time = TimeUpdateStrategy::ManualDuration(delta_time);
 
-        self.world.run_schedule(Update);
+        self.app.insert_resource(input);
+
+        self.app.update();
     }
 
     pub fn player(&self) -> Result<Transform> {
         let (transform, facing) = self
-            .world
+            .app
+            .world()
             .try_query_filtered::<(&Transform, &Facing), With<Player>>()
             .ok_or("failed query")?
-            .single(&self.world)?;
+            .single(self.app.world())?;
 
         Ok(Transform {
             translation: transform.translation,
             rotation: transform.rotation * facing.0,
+            ..Default::default()
         })
     }
 }

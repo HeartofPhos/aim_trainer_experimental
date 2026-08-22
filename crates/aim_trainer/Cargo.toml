@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy_ecs = { workspace = true }
-bevy_math = { workspace = true }
-derive_more = { workspace = true }
+bevy = { workspace = true }
+bevy_rand = { workspace = true }
 rand = { workspace = true }
+derive_more = { workspace = true }
 raylib = { workspace = true }
 thiserror = { workspace = true }
 env_logger = { workspace = true }

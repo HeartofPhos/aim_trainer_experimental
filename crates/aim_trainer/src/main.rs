@@ -2,7 +2,7 @@ use crate::{
     game::{Game, Input},
     light::{Light, LightShader, LightType},
 };
-use bevy_math::prelude::*;
+use bevy::prelude::*;
 use raylib::prelude::*;
 use schema::{BrushDef, BrushTransform, Primitive};
 use std::{

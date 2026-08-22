@@ -1,15 +1,13 @@
-use crate::game::{Random, Transform, Update, plugins::SpawnSet, utils::weighted_random};
-use bevy_ecs::prelude::*;
-use bevy_math::prelude::*;
-use rand::Rng;
+use crate::game::{GameRng, Transform, plugins::SpawnSet, utils::weighted_random};
+use bevy::prelude::*;
+use bevy_rand::prelude::*;
+use rand::RngExt;
 use schema::{BrushTransform, SpawnGroup, SpawnRules};
 use std::collections::HashMap;
 
-pub fn plugin(world: &mut World) {
-    world
-        .get_resource_or_init::<Schedules>()
-        .add_systems(Update, spawner.in_set(SpawnSet::Spawn))
-        .add_systems(Update, move_to_spawn.in_set(SpawnSet::Move));
+pub fn plugin(app: &mut App) {
+    app.add_systems(Update, spawner.in_set(SpawnSet::Spawn));
+    app.add_systems(Update, move_to_spawn.in_set(SpawnSet::Move));
 }
 
 crate::relationships! {
@@ -48,7 +46,7 @@ impl SpawnLookup {
         &self,
         group: SpawnGroup,
         target_extents: Vec3,
-        rng: &mut impl Rng,
+        rng: &mut GameRng,
     ) -> Option<(Vec3, Quat)> {
         let weighted_spawn = self.spawns.get(&group)?;
 
@@ -68,9 +66,9 @@ impl SpawnLookup {
 
         let mut delta = spawn_max - spawn_min;
 
-        delta.x *= rand::random::<f32>();
-        delta.y *= rand::random::<f32>();
-        delta.z *= rand::random::<f32>();
+        delta.x *= rng.random::<f32>();
+        delta.y *= rng.random::<f32>();
+        delta.z *= rng.random::<f32>();
 
         let translation = spawn_to_world.transform_point3(spawn_min + delta);
         let rotation = spawn_to_world.to_scale_rotation_translation().1;
@@ -95,12 +93,16 @@ pub struct Spawned {
     pub spawned: Entity,
 }
 
-fn spawner(mut commands: Commands, query: Query<(Entity, &Spawner, Option<&SpawnedList>)>) {
+fn spawner(
+    mut commands: Commands,
+    query: Query<(Entity, &Spawner, Option<&SpawnedList>)>,
+    mut global: Single<&mut GameRng, With<GlobalRng>>,
+) {
     for (spawner_entity, spawner, spawned_list) in query {
         let spawned_count = spawned_list.map(|x| x.entities().len()).unwrap_or(0);
         for _ in spawned_count..spawner.spawn_rules.limit {
             let spawned_entity = commands
-                .spawn((SpawnedBy(spawner_entity), MoveToSpawn))
+                .spawn((SpawnedBy(spawner_entity), MoveToSpawn, global.fork_seed()))
                 .id();
 
             commands.trigger(Spawned {
@@ -113,15 +115,14 @@ fn spawner(mut commands: Commands, query: Query<(Entity, &Spawner, Option<&Spawn
 
 fn move_to_spawn(
     mut commands: Commands,
-    mut random: ResMut<Random>,
     spawn_lookup: Res<SpawnLookup>,
     spawner_query: Query<&Spawner>,
-    query: Query<(Entity, &SpawnedBy), With<MoveToSpawn>>,
+    query: Query<(Entity, &SpawnedBy, &mut GameRng), With<MoveToSpawn>>,
 ) -> Result {
-    for (entity, spawned_by) in query {
+    for (entity, spawned_by, mut rng) in query {
         let spawner = spawner_query.get(spawned_by.0)?;
         let (translation, rotation) = spawn_lookup
-            .get_spawn(spawner.spawn_group, Vec3::ZERO, &mut random)
+            .get_spawn(spawner.spawn_group, Vec3::ZERO, &mut rng)
             .unwrap_or_default();
 
         commands
@@ -129,6 +130,7 @@ fn move_to_spawn(
             .insert(Transform {
                 rotation,
                 translation,
+                ..Default::default()
             })
             .remove::<MoveToSpawn>();
     }

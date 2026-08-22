@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 use derive_more::Deref;
 
 #[derive(Component, Default, Clone, Deref)]

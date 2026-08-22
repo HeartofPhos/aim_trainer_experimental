@@ -1,15 +1,14 @@
 use crate::game::{
-    Time, Transform, Update,
+    Transform, Update,
     plugins::{MovementSet, character_controller::Grounded},
     utils::Direction,
 };
-use bevy_ecs::prelude::*;
-use bevy_math::prelude::*;
+use bevy::prelude::*;
 use derive_more::Deref;
 use schema::MovementMode;
 
-pub fn plugin(world: &mut World) {
-    world.get_resource_or_init::<Schedules>().add_systems(
+pub fn plugin(app: &mut App) {
+    app.add_systems(
         Update,
         (
             jump, impulses, grounded, rotate, friction, accelerate, gravity, integrate,
@@ -152,7 +151,7 @@ fn friction(
             &mut lin_vel.0,
             friction,
             mp.stop_speed,
-            time.delta_time.as_secs_f32() * time_factor.0,
+            time.delta_secs() * time_factor.0,
         );
     }
 }
@@ -200,7 +199,7 @@ fn accelerate(
             local_wish_dir.normalize_or_zero(),
             accel,
             mp.max_speed,
-            time.delta_time.as_secs_f32() * time_factor.0,
+            time.delta_secs() * time_factor.0,
         );
 
         local_velocity += excluded_velocity;
@@ -225,13 +224,13 @@ fn gravity(
 ) {
     for (transform, mp, mut lin_vel, time_factor) in query {
         let up = transform.rotation * Vec3::UP;
-        lin_vel.0 += up * mp.gravity * time.delta_time.as_secs_f32() * time_factor.0;
+        lin_vel.0 += up * mp.gravity * time.delta_secs() * time_factor.0;
     }
 }
 
-fn integrate(time: Res<Time>, query: Query<(&mut Transform, &LinearVelocity)>) {
-    for (mut transform, lin_vel) in query {
-        transform.translation += lin_vel.0 * time.delta_time.as_secs_f32();
+fn integrate(time: Res<Time>, query: Query<(&mut Transform, &LinearVelocity, &TimeFactor)>) {
+    for (mut transform, lin_vel, time_factor) in query {
+        transform.translation += lin_vel.0 * time.delta_secs() * time_factor.0;
     }
 }
 

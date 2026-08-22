@@ -1,15 +1,12 @@
 use crate::game::{
-    Input, Update,
+    Input,
     config::SensitivityConfig,
     plugins::{InputSet, movement::MovementInput},
 };
-use bevy_ecs::prelude::*;
-use bevy_math::prelude::*;
+use bevy::prelude::*;
 
-pub fn plugin(world: &mut World) {
-    world
-        .get_resource_or_init::<Schedules>()
-        .add_systems(Update, input.in_set(InputSet));
+pub fn plugin(app: &mut App) {
+    app.add_systems(Update, input.in_set(InputSet));
 }
 
 #[derive(Component)]

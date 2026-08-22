@@ -1,6 +1,6 @@
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
 
-pub fn plugin(world: &mut World) {}
+pub fn plugin(app: &mut App) {}
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]

@@ -1,11 +1,11 @@
-use bevy_math::prelude::*;
-use rand::{Rng, RngExt};
+use bevy::prelude::*;
+use rand::RngExt;
 
 // TODO https://www.keithschwarz.com/darts-dice-coins/
 pub fn weighted_random<T>(
     total_weight: f32,
     iter: impl IntoIterator<Item = (f32, T)>,
-    rng: &mut impl Rng,
+    rng: &mut impl RngExt,
 ) -> Option<T> {
     let mut random_weight = rng.random::<f32>() * total_weight;
 
@@ -61,8 +61,8 @@ macro_rules! relationship {
     ($vis: vis, one_one $(, $args: tt)*) => {
           $crate::relationship!(
             entity,
-            bevy_ecs::prelude::Entity,
-            pub fn entity(&self) -> bevy_ecs::prelude::Entity {
+            bevy::prelude::Entity,
+            pub fn entity(&self) -> bevy::prelude::Entity {
                 self.0
             },
             $vis
@@ -72,8 +72,8 @@ macro_rules! relationship {
     ($vis: vis, one_many $(, $args: tt)*) => {
         $crate::relationship!(
             entities,
-            Vec<bevy_ecs::prelude::Entity>,
-            pub fn entities(&self) -> &Vec<bevy_ecs::prelude::Entity> {
+            Vec<bevy::prelude::Entity>,
+            pub fn entities(&self) -> &Vec<bevy::prelude::Entity> {
                 &self.0
             },
             $vis
@@ -81,11 +81,11 @@ macro_rules! relationship {
         );
     };
     ($target_name: ident, $target_type: ty, $get_fn: item, $vis: vis, $rel: ident, [$($rel_args: meta),*], $rel_target: ident, [$($rel_target_args: meta),*]) => {
-        #[derive(Debug, bevy_ecs::prelude::Component, bevy_ecs::prelude::FromTemplate)]
+        #[derive(Debug, bevy::prelude::Component, bevy::prelude::FromTemplate)]
         #[relationship(relationship_target = $rel_target $(, $rel_args)*)]
-        $vis struct $rel(pub bevy_ecs::prelude::Entity);
+        $vis struct $rel(pub bevy::prelude::Entity);
 
-        #[derive(Debug, bevy_ecs::prelude::Component)]
+        #[derive(Debug, bevy::prelude::Component)]
         #[relationship_target(relationship = $rel $(, $rel_target_args)*)]
         $vis struct $rel_target($target_type);
 

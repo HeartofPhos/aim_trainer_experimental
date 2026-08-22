@@ -1,18 +1,18 @@
-use crate::game::Update;
-use bevy_ecs::prelude::*;
+use bevy::prelude::*;
+use bevy_rand::prelude::*;
 
 pub mod character_controller;
 pub mod input_driver;
 pub mod movement;
 pub mod spawn;
 
-pub fn plugin(world: &mut World) {
-    character_controller::plugin(world);
-    input_driver::plugin(world);
-    movement::plugin(world);
-    spawn::plugin(world);
+pub fn plugin(app: &mut App) {
+    app.add_plugins(character_controller::plugin);
+    app.add_plugins(input_driver::plugin);
+    app.add_plugins(movement::plugin);
+    app.add_plugins(spawn::plugin);
 
-    world.get_resource_or_init::<Schedules>().configure_sets(
+    app.configure_sets(
         Update,
         (
             SpawnSet::Spawn,
@@ -20,6 +20,9 @@ pub fn plugin(world: &mut World) {
             InputSet,
             MovementSet,
             CharacterControllerSet,
+            PhysicsSet::SyncBackend,
+            PhysicsSet::StepSimulation,
+            PhysicsSet::Writeback,
         )
             .chain(),
     );
@@ -38,4 +41,11 @@ pub struct InputSet;
 pub enum SpawnSet {
     Spawn,
     Move,
+}
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum PhysicsSet {
+    SyncBackend,
+    StepSimulation,
+    Writeback,
 }
