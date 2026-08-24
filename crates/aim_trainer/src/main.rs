@@ -19,11 +19,8 @@ fn main() {
     let time_step = Duration::from_secs_f32(1.0 / 256.0);
     let game = Game::new(ref_asset::paths::scenario("track-move"), time_step);
 
-    let (mut rl, thread) = raylib::init()
-        .fullscreen()
-        .title("aim_trainer")
-        .log_to_rust()
-        .build();
+    let (mut rl, thread) = raylib::init().title("aim_trainer").log_to_rust().build();
+    rl.toggle_borderless_windowed();
 
     let mut light_shader = LightShader::<1>::new(&mut rl, &thread);
     let brightness = Vector4::new(0.1, 0.1, 0.1, 1.0);
