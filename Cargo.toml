@@ -5,6 +5,14 @@ members = ["crates/aim_trainer", "crates/ref_asset", "crates/schema"]
 [workspace.dependencies]
 bevy = { version = "0.19", default-features = false }
 bevy_math = { version = "0.19" }
+
+avian3d = { version = "0.7.0", default-features = false, features = [
+    "3d",
+    "f32",
+    "parry-f32",
+    "default-collider",
+    "enhanced-determinism",
+] }
 bevy_rand = { version = "0.15", features = ["wyrand"] }
 rand = { version = "0.10", default-features = false }
 derive_more = { version = "2.1" }
@@ -21,9 +29,11 @@ log = { version = "*", features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
+extend = "1.2"
 
 [patch.crates-io]
 raylib = { git = 'https://github.com/HeartofPhos/raylib-rs.git', branch = 'unstable' }
+avian3d = { git = 'https://github.com/HeartofPhos/avian.git', branch = 'release-v0.7.0' }
 
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.

@@ -1,8 +1,8 @@
 use crate::{
-    game::{Game, Input},
+    game::{Game, Input, plugins::level::PrimitiveCache},
     light::{Light, LightShader, LightType},
 };
-use bevy::prelude::*;
+use bevy::math::prelude::*;
 use raylib::prelude::*;
 use schema::{BrushDef, BrushTransform, Primitive};
 use std::{
@@ -16,7 +16,8 @@ mod light;
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let game = Game::new(ref_asset::paths::scenario("track-move"));
+    let time_step = Duration::from_secs_f32(1.0 / 256.0);
+    let game = Game::new(ref_asset::paths::scenario("track-move"), time_step);
 
     let (mut rl, thread) = raylib::init()
         .fullscreen()
@@ -49,7 +50,7 @@ fn main() {
     );
     mat_b.set_shader(light_shader.shader());
 
-    let draw_brush = build_draw_brush(&thread, mat_a, mat_b);
+    let draw_brush = build_draw_brush(&thread, game.primitive_cache(), mat_a, mat_b);
 
     let mut camera = Camera3D::perspective(
         Vector3::ZERO, // Camera position
@@ -62,12 +63,12 @@ fn main() {
 
     game_loop(
         rl,
-        Duration::from_secs_f32(1.0 / 256.0),
+        time_step,
         game,
         Input::default(),
         |rl, game, input, elapsed, delta_time| {
             game.update(delta_time, *input);
-            *input = Input::default();
+            input.look = Default::default();
         },
         |rl, game, input, elapsed, delta_time| {
             fn dir(neg: bool, pos: bool) -> f32 {
@@ -151,17 +152,18 @@ fn game_loop<S, I>(
 
 fn build_draw_brush(
     thread: &RaylibThread,
+    primitive_cache: &PrimitiveCache,
     mat_a: WeakMaterial,
     mat_b: WeakMaterial,
-) -> impl Fn(&mut RaylibMode3D<RaylibDrawHandle>, &BrushDef, &BrushTransform) {
-    let primitive_lookup = primitive_lookup(thread);
+) -> impl Fn(&mut RaylibMode3D<RaylibDrawHandle>, &BrushDef, &BrushTransform) + use<> {
+    let primitive_cache = raylib_primitive_cache(thread, primitive_cache);
 
     move |c, brush_def, brush_transform| {
         let (mat, mesh) = match brush_def {
             schema::BrushDef::Primitive { primitive, .. } => {
-                (&mat_a, primitive_lookup.get(primitive))
+                (&mat_a, primitive_cache.get(primitive))
             }
-            schema::BrushDef::Spawn { .. } => (&mat_b, primitive_lookup.get(&Primitive::Cuboid)),
+            schema::BrushDef::Spawn { .. } => (&mat_b, primitive_cache.get(&Primitive::Cuboid)),
         };
 
         if let Some(mesh) = mesh {
@@ -178,156 +180,28 @@ fn build_draw_brush(
     }
 }
 
-fn primitive_lookup(thread: &RaylibThread) -> HashMap<Primitive, Mesh> {
+fn raylib_primitive_cache(
+    thread: &RaylibThread,
+    primitive_cache: &PrimitiveCache,
+) -> HashMap<Primitive, Mesh> {
     let mut lookup = HashMap::new();
     for primitive in Primitive::iter() {
-        let mesh = build_mesh(thread, primitive);
+        let mesh = build_mesh(thread, primitive, primitive_cache);
         lookup.insert(*primitive, mesh);
     }
 
     lookup
 }
 
-fn build_mesh(thread: &RaylibThread, primitive: &Primitive) -> Mesh {
-    let (mut vertices, indices) = match primitive {
-        Primitive::Cuboid => {
-            let vertices = vec![
-                Vec3::new(0.0, 0.0, 0.0), // 0
-                Vec3::new(1.0, 0.0, 0.0), // 1
-                Vec3::new(1.0, 0.0, 1.0), // 2
-                Vec3::new(0.0, 0.0, 1.0), // 3
-                Vec3::new(0.0, 1.0, 0.0), // 4
-                Vec3::new(1.0, 1.0, 0.0), // 5
-                Vec3::new(1.0, 1.0, 1.0), // 6
-                Vec3::new(0.0, 1.0, 1.0), // 7
-            ];
+fn build_mesh(
+    thread: &RaylibThread,
+    primitive: &Primitive,
+    primitive_cache: &PrimitiveCache,
+) -> Mesh {
+    let mesh = primitive_cache.get_mesh(primitive).expect("missing mesh");
 
-            #[rustfmt::skip]
-                let indices: Vec<_> = vec![
-                    // down
-                    0, 1, 2,
-                    2, 3, 0,
-                    // up
-                    4, 7, 6,
-                    6, 5, 4,
-                    // forward
-                    0, 4, 5,
-                    5, 1, 0,
-                    // back
-                    3, 2, 6,
-                    6, 7, 3,
-                    // left
-                    0, 3, 7,
-                    7, 4, 0,
-                    // right
-                    1, 5, 6,
-                    6, 2, 1,
-                ];
-
-            (vertices, indices)
-        }
-        Primitive::Ramp => {
-            let vertices = vec![
-                Vec3::new(0.0, 0.0, 0.0), // 0
-                Vec3::new(1.0, 0.0, 0.0), // 1
-                Vec3::new(1.0, 0.0, 1.0), // 2
-                Vec3::new(0.0, 0.0, 1.0), // 3
-                Vec3::new(0.0, 1.0, 0.0), // 4
-                Vec3::new(1.0, 1.0, 0.0), // 5
-            ];
-
-            #[rustfmt::skip]
-                let indices: Vec<_> = vec![
-                    // back
-                    5, 1, 0,
-                    0, 4, 5,
-                    // down
-                    0, 1, 2,
-                    2, 3, 0,
-                    // forward
-                    4, 3, 2,
-                    2, 5, 4,
-                    // left
-                    0, 3, 4,
-                    // right
-                    5, 2, 1,
-                ];
-
-            (vertices, indices)
-        }
-        Primitive::Corner => {
-            let vertices = vec![
-                Vec3::new(0.0, 0.0, 0.0), // 0
-                Vec3::new(1.0, 0.0, 0.0), // 1
-                Vec3::new(0.0, 0.0, 1.0), // 2
-                Vec3::new(0.0, 1.0, 0.0), // 3
-            ];
-
-            #[rustfmt::skip]
-                let indices: Vec<_> = vec![
-                    // back
-                    0, 3, 1,
-                    // left
-                    2, 3, 0,
-                    // down
-                    0, 1, 2,
-                    // forward
-                    2, 1, 3,
-                ];
-
-            (vertices, indices)
-        }
-        Primitive::CornerInverse => {
-            let vertices = vec![
-                Vec3::new(1.0, 0.0, 1.0),
-                Vec3::new(0.0, 1.0, 1.0),
-                Vec3::new(0.0, 0.0, 1.0),
-                Vec3::new(1.0, 1.0, 0.0),
-                Vec3::new(1.0, 0.0, 0.0),
-                Vec3::new(0.0, 1.0, 0.0),
-                Vec3::new(0.0, 0.0, 0.0),
-            ];
-
-            #[rustfmt::skip]
-                let indices: Vec<_> = vec![
-                    4, 3, 0,
-                    1, 6, 2,
-                    5, 4, 6,
-                    0, 6, 4,
-                    1, 0, 3,
-                    3, 5, 1,
-                    2, 0, 1,
-                    1, 5, 6,
-                    5, 3, 4,
-                    0, 2, 6,
-                ];
-
-            (vertices, indices)
-        }
-    };
-
-    let offset = Vec3::NEG_ONE * 0.5;
-    let mat = Mat4::from_translation(offset);
-
-    for vertex in &mut vertices {
-        *vertex = mat.transform_point3(*vertex);
-    }
-
-    let normals: Vec<_> = indices
-        .chunks(3)
-        .flat_map(|i| {
-            let v0 = vertices[i[0] as usize];
-            let v1 = vertices[i[1] as usize];
-            let v2 = vertices[i[2] as usize];
-
-            [Vec3::cross(v0 - v1, v0 - v2).normalize(); 3]
-        })
-        .collect();
-
-    let vertices: Vec<_> = indices.iter().map(|i| vertices[*i as usize]).collect();
-
-    let vertices: Vec<_> = vertices.into_iter().map(Into::into).collect();
-    let normals: Vec<_> = normals.into_iter().map(Into::into).collect();
+    let vertices: Vec<_> = mesh.vertices.iter().copied().map(Into::into).collect();
+    let normals: Vec<_> = mesh.normals.iter().copied().map(Into::into).collect();
     let tex: Vec<Vector2> = vertices.iter().map(|_| Vector2::zero()).collect();
 
     Mesh::gen_mesh(&vertices, &tex)

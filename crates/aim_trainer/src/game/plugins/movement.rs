@@ -1,26 +1,32 @@
 use crate::game::{
-    Transform, Update,
-    plugins::{MovementSet, character_controller::Grounded},
+    Transform,
+    plugins::{MovementSet, TimeFactor, character_controller::Grounded},
     utils::Direction,
 };
+use avian3d::prelude::*;
 use bevy::prelude::*;
 use derive_more::Deref;
 use schema::MovementMode;
 
 pub fn plugin(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
-            jump, impulses, grounded, rotate, friction, accelerate, gravity, integrate,
+            jump, impulses, grounded, rotate, friction, accelerate, gravity,
         )
             .chain()
             .in_set(MovementSet),
     );
 }
 
+crate::relationships! {
+    pub
+    crate::relationship!(pub, one_one, FacingOf, [], Facing, []);
+}
+
 #[derive(Component, Default, Clone, Copy, Deref)]
 #[component(immutable)]
-#[require(Transform, Facing, LinearVelocity, MovementInput, TimeFactor)]
+#[require(Transform, MovementInput)]
 pub struct MovementProfile(pub schema::MovementProfile);
 
 impl MovementProfile {
@@ -34,27 +40,12 @@ impl MovementProfile {
     }
 }
 
-#[derive(Component, Debug, Default)]
-pub struct LinearVelocity(pub Vec3);
-
 #[derive(Component, Default)]
 pub struct MovementInput {
     pub direction: Option<Dir3>,
     pub impulses: Vec<(Dir3, f32)>,
     pub pitch_delta: f32,
     pub yaw_delta: f32,
-}
-
-#[derive(Component, Default)]
-pub struct Facing(pub Quat);
-
-#[derive(Component)]
-struct TimeFactor(f32);
-
-impl Default for TimeFactor {
-    fn default() -> Self {
-        Self(1.0)
-    }
 }
 
 fn apply_impulse(transform: &Transform, mut velocity: Vec3, dir: Dir3, speed: f32) -> Vec3 {
@@ -87,14 +78,19 @@ pub fn exclude_axes<const N: usize>(
 }
 
 const PITCH_LIMIT: f32 = 89.00 * (std::f32::consts::PI / 180.0);
-fn rotate(query: Query<(&MovementInput, &mut Facing)>) -> Result {
-    for (mi, mut facing) in query {
-        let (yaw, pitch, roll) = facing.0.to_euler(EulerRot::YXZ);
+fn rotate(
+    query: Query<(&MovementInput, &Facing)>,
+    mut facing_query: Query<&mut Transform>,
+) -> Result {
+    for (mi, facing) in query {
+        let mut facing = facing_query.get_mut(facing.entity())?;
+
+        let (yaw, pitch, roll) = facing.rotation.to_euler(EulerRot::YXZ);
 
         let pitch_wish = f32::clamp(pitch + mi.pitch_delta, -PITCH_LIMIT, PITCH_LIMIT);
         let yaw_wish = yaw + mi.yaw_delta;
 
-        facing.0 = Quat::from_euler(EulerRot::YXZ, yaw_wish, pitch_wish, roll);
+        facing.rotation = Quat::from_euler(EulerRot::YXZ, yaw_wish, pitch_wish, roll);
     }
 
     Ok(())
@@ -167,8 +163,11 @@ fn accelerate(
         &Transform,
         &TimeFactor,
     )>,
+    facing_query: Query<&Transform>,
 ) -> Result {
     for (grounded, mi, mp, mut lin_vel, facing, transform, time_factor) in query {
+        let facing = facing_query.get(facing.entity())?;
+
         let accel = if grounded {
             mp.accelerate
         } else {
@@ -185,7 +184,7 @@ fn accelerate(
         let [excluded_wish_dir] = exclude_axes(mp.get_excluded_axes(), [wish_dir]);
         wish_dir -= excluded_wish_dir;
 
-        let mut local_wish_dir = facing.0 * wish_dir;
+        let mut local_wish_dir = facing.rotation * wish_dir;
         let mut local_velocity = transform.rotation.inverse() * lin_vel.0;
 
         let [excluded_wish_dir, excluded_velocity] =
@@ -225,12 +224,6 @@ fn gravity(
     for (transform, mp, mut lin_vel, time_factor) in query {
         let up = transform.rotation * Vec3::UP;
         lin_vel.0 += up * mp.gravity * time.delta_secs() * time_factor.0;
-    }
-}
-
-fn integrate(time: Res<Time>, query: Query<(&mut Transform, &LinearVelocity, &TimeFactor)>) {
-    for (mut transform, lin_vel, time_factor) in query {
-        transform.translation += lin_vel.0 * time.delta_secs() * time_factor.0;
     }
 }
 

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 bevy = { workspace = true }
+avian3d = { workspace = true }
 bevy_rand = { workspace = true }
 rand = { workspace = true }
 derive_more = { workspace = true }
@@ -12,6 +13,7 @@ raylib = { workspace = true }
 thiserror = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
+extend = { workspace = true }
 
 schema = { path = "../schema" }
 ref_asset = { path = "../ref_asset" }

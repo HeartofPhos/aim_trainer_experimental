@@ -1,28 +1,30 @@
+use avian3d::schedule::PhysicsSystems;
 use bevy::prelude::*;
-use bevy_rand::prelude::*;
 
 pub mod character_controller;
 pub mod input_driver;
+pub mod level;
 pub mod movement;
+pub mod shape;
 pub mod spawn;
 
 pub fn plugin(app: &mut App) {
-    app.add_plugins(character_controller::plugin);
     app.add_plugins(input_driver::plugin);
+    app.add_plugins(character_controller::plugin);
     app.add_plugins(movement::plugin);
+    app.add_plugins(level::plugin);
+    app.add_plugins(shape::plugin);
     app.add_plugins(spawn::plugin);
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             SpawnSet::Spawn,
             SpawnSet::Move,
             InputSet,
             MovementSet,
             CharacterControllerSet,
-            PhysicsSet::SyncBackend,
-            PhysicsSet::StepSimulation,
-            PhysicsSet::Writeback,
+            PhysicsSystems::First,
         )
             .chain(),
     );
@@ -43,9 +45,11 @@ pub enum SpawnSet {
     Move,
 }
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub enum PhysicsSet {
-    SyncBackend,
-    StepSimulation,
-    Writeback,
+#[derive(Component)]
+pub struct TimeFactor(f32);
+
+impl Default for TimeFactor {
+    fn default() -> Self {
+        Self(1.0)
+    }
 }

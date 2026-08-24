@@ -1,20 +1,25 @@
 use crate::game::{
     config::SensitivityConfig,
-    level::{BrushDef, BrushTransform},
+    layers::CollisionLayersExt,
     plugins::{
+        TimeFactor,
+        character_controller::{CharacterController, GroundDetection},
         input_driver::InputDriver,
-        movement::{Facing, MovementProfile},
+        level::{BrushDef, PrimitiveCache},
+        movement::{FacingOf, MovementProfile},
+        shape::Shape,
         spawn::{SpawnLookup, Spawned, Spawner},
     },
 };
+use avian3d::prelude::*;
 use bevy::{prelude::*, time::TimeUpdateStrategy};
 use bevy_rand::plugin::EntropyPlugin;
-use schema::{SpawnGroup, SpawnRules};
+use schema::{SpawnGroup, SpawnRules, Team};
 use std::{path::PathBuf, time::Duration};
 
 mod config;
-mod level;
-mod plugins;
+mod layers;
+pub mod plugins;
 mod utils;
 
 pub struct Game {
@@ -33,32 +38,53 @@ struct LoadScenario(PathBuf);
 pub type GameRng = bevy_rand::prelude::WyRand;
 
 impl Game {
-    pub fn new(scenario_path: impl Into<PathBuf>) -> Self {
+    pub fn new(scenario_path: impl Into<PathBuf>, time_step: Duration) -> Self {
         let mut app = App::new();
 
         app.add_plugins(MinimalPlugins);
+        app.add_plugins(TransformPlugin);
+        app.insert_resource(Time::<Fixed>::from_duration(time_step));
+        app.add_plugins(PhysicsPlugins::default());
         app.add_plugins(EntropyPlugin::<GameRng>::with_seed([0; 8]));
         app.add_plugins(plugins::plugin);
 
         app.init_resource::<Time>();
+        app.init_resource::<PrimitiveCache>();
         app.init_resource::<SpawnLookup>();
+        app.insert_resource(SensitivityConfig(schema::SensitivityConfig {
+            sensitivity: 1.0,
+            sensitivity_factor: 0.022,
+        }));
 
         app.add_observer(load_scenario);
 
         app.world_mut().trigger(LoadScenario(scenario_path.into()));
 
+        app.finish();
+
         Self { app }
     }
 
+    pub fn primitive_cache(&self) -> &PrimitiveCache {
+        self.app.world().resource::<PrimitiveCache>()
+    }
+
     pub fn level_brushes(&self, mut f: impl FnMut(&schema::BrushDef, &schema::BrushTransform)) {
-        for (brush_def, brush_transform) in self
+        for (brush_def, transform) in self
             .app
             .world()
-            .try_query::<(&BrushDef, &BrushTransform)>()
+            .try_query::<(&BrushDef, &Transform)>()
             .unwrap()
             .iter(self.app.world())
         {
-            f(brush_def, brush_transform);
+            f(
+                brush_def,
+                &schema::BrushTransform {
+                    translation: transform.translation,
+                    rotation: transform.rotation,
+                    scale: transform.scale,
+                },
+            );
         }
     }
 
@@ -72,16 +98,16 @@ impl Game {
     }
 
     pub fn player(&self) -> Result<Transform> {
-        let (transform, facing) = self
+        let transform = self
             .app
             .world()
-            .try_query_filtered::<(&Transform, &Facing), With<Player>>()
+            .try_query_filtered::<&GlobalTransform, With<Player>>()
             .ok_or("failed query")?
             .single(self.app.world())?;
 
         Ok(Transform {
-            translation: transform.translation,
-            rotation: transform.rotation * facing.0,
+            translation: transform.translation(),
+            rotation: transform.rotation(),
             ..Default::default()
         })
     }
@@ -100,11 +126,6 @@ fn load_scenario(
 ) -> Result {
     let (scenario, _): (schema::Scenario, _) = ref_asset::io::read_file(&load_scenario.0)?;
 
-    commands.insert_resource(SensitivityConfig(schema::SensitivityConfig {
-        sensitivity: 1.0,
-        sensitivity_factor: 0.022,
-    }));
-
     for brush in scenario.level.brush_list {
         match brush.def {
             schema::BrushDef::Spawn { group } => {
@@ -113,7 +134,53 @@ fn load_scenario(
             schema::BrushDef::Primitive { .. } => (),
         }
 
-        commands.spawn((BrushTransform(brush.transform), BrushDef(brush.def)));
+        commands.spawn((
+            Transform {
+                translation: brush.transform.translation,
+                rotation: brush.transform.rotation,
+                scale: brush.transform.scale,
+            },
+            RigidBody::Static,
+            CollisionLayers::brush(&brush.def),
+            BrushDef(brush.def),
+        ));
+    }
+
+    fn character(
+        mut commands: Commands,
+        entity: Entity,
+        character: schema::CharacterTemplate,
+        movement: schema::MovementProfile,
+    ) -> Entity {
+        let shape = Shape::from(character.shape);
+
+        let entity = commands
+            .entity(entity)
+            .insert((
+                shape,
+                TimeFactor::default(),
+                MovementProfile(movement),
+                CharacterController,
+                GroundDetection::default(),
+            ))
+            .id();
+
+        #[expect(clippy::let_and_return)]
+        let view = if let Some(eyes) = character.eyes {
+            let anchor_transform = Transform::from_xyz(0.0, -shape.extents().y + eyes.height, 0.0);
+            let view_transform = Transform::from_xyz(0.0, 0.0, eyes.offset);
+
+            let anchor = commands.spawn((anchor_transform, ChildOf(entity))).id();
+            let view = commands.spawn((view_transform, ChildOf(anchor))).id();
+
+            view
+        } else {
+            entity
+        };
+
+        commands.entity(view).insert(FacingOf(entity));
+
+        view
     }
 
     commands
@@ -122,11 +189,18 @@ fn load_scenario(
             spawn_group: SpawnGroup(0),
         })
         .observe(move |spawned: On<Spawned>, mut commands: Commands| {
-            commands.entity(spawned.spawned).insert((
-                Player,
-                InputDriver,
-                MovementProfile(scenario.player.movement),
-            ));
+            let view = character(
+                commands.reborrow(),
+                spawned.spawned,
+                scenario.player.character,
+                scenario.player.movement,
+            );
+
+            commands
+                .entity(spawned.spawned)
+                .insert((InputDriver, CollisionLayers::character(Team::PLAYER)));
+
+            commands.entity(view).insert(Player);
         });
 
     if let Some(bot_template) = scenario.bot_template {
@@ -135,8 +209,19 @@ fn load_scenario(
                 spawn_rules: bot_template.spawn_rules,
                 spawn_group: SpawnGroup(1),
             })
-            .observe(|spawned: On<Spawned>, mut commands: Commands| {
-                commands.entity(spawned.spawned).insert(Bot);
+            .observe(move |spawned: On<Spawned>, mut commands: Commands| {
+                let view = character(
+                    commands.reborrow(),
+                    spawned.spawned,
+                    scenario.player.character,
+                    scenario.player.movement,
+                );
+
+                commands
+                    .entity(spawned.spawned)
+                    .insert(CollisionLayers::character(Team::BOT));
+
+                commands.entity(view).insert(Bot);
             });
     }
 

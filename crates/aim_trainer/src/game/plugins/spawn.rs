@@ -6,8 +6,8 @@ use schema::{BrushTransform, SpawnGroup, SpawnRules};
 use std::collections::HashMap;
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(Update, spawner.in_set(SpawnSet::Spawn));
-    app.add_systems(Update, move_to_spawn.in_set(SpawnSet::Move));
+    app.add_systems(FixedUpdate, spawner.in_set(SpawnSet::Spawn));
+    app.add_systems(FixedUpdate, move_to_spawn.in_set(SpawnSet::Move));
 }
 
 crate::relationships! {

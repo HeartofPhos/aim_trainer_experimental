@@ -6,7 +6,7 @@ use crate::game::{
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(Update, input.in_set(InputSet));
+    app.add_systems(FixedUpdate, input.in_set(InputSet));
 }
 
 #[derive(Component)]
