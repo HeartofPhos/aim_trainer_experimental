@@ -3,6 +3,7 @@ use crate::game::{
     layers::CollisionLayersExt,
     plugins::{
         TimeFactor,
+        auto_driver::AutoDriver,
         character_controller::{CharacterController, GroundDetection},
         input_driver::InputDriver,
         level::{BrushDef, PrimitiveCache},
@@ -12,7 +13,7 @@ use crate::game::{
     },
 };
 use avian3d::prelude::*;
-use bevy::{prelude::*, time::TimeUpdateStrategy};
+use bevy::{log::LogPlugin, prelude::*, time::TimeUpdateStrategy};
 use bevy_rand::plugin::EntropyPlugin;
 use schema::{SpawnGroup, SpawnRules, Team};
 use std::{path::PathBuf, time::Duration};
@@ -42,6 +43,7 @@ impl Game {
         let mut app = App::new();
 
         app.add_plugins(MinimalPlugins);
+        app.add_plugins(LogPlugin::default());
         app.add_plugins(TransformPlugin);
         app.insert_resource(Time::<Fixed>::from_duration(time_step));
         app.add_plugins(PhysicsPlugins::default());
@@ -70,13 +72,13 @@ impl Game {
     }
 
     pub fn level_brushes(&self, mut f: impl FnMut(&schema::BrushDef, &schema::BrushTransform)) {
-        for (brush_def, transform) in self
+        let mut query = self
             .app
             .world()
             .try_query::<(&BrushDef, &Transform)>()
-            .unwrap()
-            .iter(self.app.world())
-        {
+            .unwrap();
+
+        for (brush_def, transform) in query.iter(self.app.world()) {
             f(
                 brush_def,
                 &schema::BrushTransform {
@@ -105,11 +107,19 @@ impl Game {
             .ok_or("failed query")?
             .single(self.app.world())?;
 
-        Ok(Transform {
-            translation: transform.translation(),
-            rotation: transform.rotation(),
-            ..Default::default()
-        })
+        Ok((*transform).into())
+    }
+
+    pub fn shapes(&self, mut f: impl FnMut(Transform, Shape)) {
+        let mut query = self
+            .app
+            .world()
+            .try_query_filtered::<(&GlobalTransform, &Shape), ()>()
+            .unwrap();
+
+        for (transform, shape) in query.iter(self.app.world()) {
+            f((*transform).into(), *shape);
+        }
     }
 }
 
@@ -165,20 +175,19 @@ fn load_scenario(
             ))
             .id();
 
-        #[expect(clippy::let_and_return)]
-        let view = if let Some(eyes) = character.eyes {
+        let (anchor, view) = if let Some(eyes) = character.eyes {
             let anchor_transform = Transform::from_xyz(0.0, -shape.extents().y + eyes.height, 0.0);
             let view_transform = Transform::from_xyz(0.0, 0.0, eyes.offset);
 
             let anchor = commands.spawn((anchor_transform, ChildOf(entity))).id();
             let view = commands.spawn((view_transform, ChildOf(anchor))).id();
 
-            view
+            (anchor, view)
         } else {
-            entity
+            (entity, entity)
         };
 
-        commands.entity(view).insert(FacingOf(entity));
+        commands.entity(anchor).insert(FacingOf(entity));
 
         view
     }
@@ -217,9 +226,10 @@ fn load_scenario(
                     scenario.player.movement,
                 );
 
-                commands
-                    .entity(spawned.spawned)
-                    .insert(CollisionLayers::character(Team::BOT));
+                commands.entity(spawned.spawned).insert((
+                    AutoDriver::from(bot_template.driver.clone()),
+                    CollisionLayers::character(Team::BOT),
+                ));
 
                 commands.entity(view).insert(Bot);
             });

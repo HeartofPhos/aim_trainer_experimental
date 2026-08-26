@@ -1,12 +1,12 @@
 use crate::game::{
     Input,
     config::SensitivityConfig,
-    plugins::{InputSet, movement::MovementInput},
+    plugins::{DriverSet, movement::MovementInput},
 };
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(FixedUpdate, input.in_set(InputSet));
+    app.add_systems(FixedUpdate, input.in_set(DriverSet));
 }
 
 #[derive(Component)]

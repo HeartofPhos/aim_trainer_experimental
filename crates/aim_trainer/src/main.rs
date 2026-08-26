@@ -14,8 +14,6 @@ mod game;
 mod light;
 
 fn main() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-
     let time_step = Duration::from_secs_f32(1.0 / 256.0);
     let game = Game::new(ref_asset::paths::scenario("track-move"), time_step);
 
@@ -109,6 +107,34 @@ fn main() {
 
                 game.level_brushes(|brush_def, brush_transform| {
                     draw_brush(&mut c, brush_def, brush_transform)
+                });
+
+                let color = Color::RED;
+                let resolution = 16;
+                game.shapes(|transform, shape| match shape {
+                    game::plugins::shape::Shape::Sphere(shape) => c.draw_sphere_ex(
+                        transform.translation,
+                        shape.radius,
+                        resolution,
+                        resolution,
+                        color,
+                    ),
+                    game::plugins::shape::Shape::Capsule(shape) => c.draw_capsule(
+                        transform.translation - Vec3::new(0.0, shape.half_length, 0.0),
+                        transform.translation + Vec3::new(0.0, shape.half_length, 0.0),
+                        shape.radius,
+                        resolution,
+                        resolution,
+                        color,
+                    ),
+                    game::plugins::shape::Shape::Cylinder(shape) => c.draw_cylinder(
+                        transform.translation,
+                        shape.radius,
+                        shape.radius,
+                        shape.half_height * 2.0,
+                        resolution,
+                        color,
+                    ),
                 });
             }
 

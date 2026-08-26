@@ -4,7 +4,7 @@ use crate::game::{
     utils::Direction,
 };
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, math::FloatPow, prelude::*};
 use derive_more::Deref;
 use schema::MovementMode;
 
@@ -75,6 +75,37 @@ pub fn exclude_axes<const N: usize>(
     }
 
     output
+}
+
+#[derive(SystemParam)]
+pub struct SpeedThreshold<'w, 's> {
+    query: Query<
+        'w,
+        's,
+        (
+            &'static MovementInput,
+            &'static LinearVelocity,
+            &'static MovementProfile,
+            &'static Facing,
+        ),
+    >,
+    transform_query: Query<'w, 's, &'static GlobalTransform>,
+}
+
+impl<'w, 's> SpeedThreshold<'w, 's> {
+    pub fn pass_speed_threshold(&self, entity: Entity, threshold: f32) -> Result<bool> {
+        let (mi, lin_vel, mp, facing) = self.query.get(entity)?;
+        let facing = self.transform_query.get(facing.entity())?;
+
+        let speed_squared = match mi.direction {
+            Some(direction) => {
+                Vec3::dot(facing.rotation() * direction.as_vec3(), lin_vel.0).squared()
+            }
+            None => lin_vel.0.length_squared(),
+        };
+
+        Ok(speed_squared >= (mp.max_speed * threshold).squared())
+    }
 }
 
 const PITCH_LIMIT: f32 = 89.00 * (std::f32::consts::PI / 180.0);

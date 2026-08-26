@@ -1,6 +1,7 @@
 use avian3d::schedule::PhysicsSystems;
 use bevy::prelude::*;
 
+pub mod auto_driver;
 pub mod character_controller;
 pub mod input_driver;
 pub mod level;
@@ -9,6 +10,7 @@ pub mod shape;
 pub mod spawn;
 
 pub fn plugin(app: &mut App) {
+    app.add_plugins(auto_driver::plugin);
     app.add_plugins(input_driver::plugin);
     app.add_plugins(character_controller::plugin);
     app.add_plugins(movement::plugin);
@@ -21,7 +23,7 @@ pub fn plugin(app: &mut App) {
         (
             SpawnSet::Spawn,
             SpawnSet::Move,
-            InputSet,
+            DriverSet,
             MovementSet,
             CharacterControllerSet,
             PhysicsSystems::First,
@@ -37,7 +39,7 @@ pub struct CharacterControllerSet;
 pub struct MovementSet;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct InputSet;
+pub struct DriverSet;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SpawnSet {

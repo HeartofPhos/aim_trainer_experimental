@@ -1,4 +1,8 @@
-use crate::game::{GameRng, Transform, plugins::SpawnSet, utils::weighted_random};
+use crate::game::{
+    GameRng, Transform,
+    plugins::{SpawnSet, shape::ShapeExtents},
+    utils::weighted_random,
+};
 use bevy::prelude::*;
 use bevy_rand::prelude::*;
 use rand::RngExt;
@@ -117,12 +121,20 @@ fn move_to_spawn(
     mut commands: Commands,
     spawn_lookup: Res<SpawnLookup>,
     spawner_query: Query<&Spawner>,
-    query: Query<(Entity, &SpawnedBy, &mut GameRng), With<MoveToSpawn>>,
+    query: Query<(Entity, &SpawnedBy, Option<&ShapeExtents>, &mut GameRng), With<MoveToSpawn>>,
 ) -> Result {
-    for (entity, spawned_by, mut rng) in query {
+    for (entity, spawned_by, shape_extents, mut rng) in query {
+        let extents = match shape_extents {
+            Some(shape_extents) => shape_extents.0,
+            None => {
+                warn!(?entity, "missing shape extents");
+                Vec3::ZERO
+            }
+        };
+
         let spawner = spawner_query.get(spawned_by.0)?;
         let (translation, rotation) = spawn_lookup
-            .get_spawn(spawner.spawn_group, Vec3::ZERO, &mut rng)
+            .get_spawn(spawner.spawn_group, extents, &mut rng)
             .unwrap_or_default();
 
         commands
