@@ -31,6 +31,9 @@ pub struct Game {
 struct Player;
 
 #[derive(Component)]
+struct Camera;
+
+#[derive(Component)]
 struct Bot;
 
 #[derive(Event)]
@@ -99,11 +102,11 @@ impl Game {
         self.app.update();
     }
 
-    pub fn player(&self) -> Result<Transform> {
+    pub fn camera(&self) -> Result<Transform> {
         let transform = self
             .app
             .world()
-            .try_query_filtered::<&GlobalTransform, With<Player>>()
+            .try_query_filtered::<&GlobalTransform, With<Camera>>()
             .ok_or("failed query")?
             .single(self.app.world())?;
 
@@ -205,11 +208,13 @@ fn load_scenario(
                 scenario.player.movement,
             );
 
-            commands
-                .entity(spawned.spawned)
-                .insert((InputDriver, CollisionLayers::character(Team::PLAYER)));
+            commands.entity(spawned.spawned).insert((
+                Player,
+                InputDriver,
+                CollisionLayers::character(Team::PLAYER),
+            ));
 
-            commands.entity(view).insert(Player);
+            commands.entity(view).insert(Camera);
         });
 
     if let Some(bot_template) = scenario.bot_template {
@@ -219,7 +224,7 @@ fn load_scenario(
                 spawn_group: SpawnGroup(1),
             })
             .observe(move |spawned: On<Spawned>, mut commands: Commands| {
-                let view = character(
+                character(
                     commands.reborrow(),
                     spawned.spawned,
                     scenario.player.character,
@@ -227,11 +232,10 @@ fn load_scenario(
                 );
 
                 commands.entity(spawned.spawned).insert((
+                    Bot,
                     AutoDriver::from(bot_template.driver.clone()),
                     CollisionLayers::character(Team::BOT),
                 ));
-
-                commands.entity(view).insert(Bot);
             });
     }
 

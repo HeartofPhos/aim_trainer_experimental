@@ -51,7 +51,7 @@ fn main() {
         Vector3::ZERO, // Camera position
         Vector3::ZERO, // Camera looking at point
         Vector3::Y,    // Camera up vector (rotation towards target)
-        60.0,          // Camera field-of-view Y
+        70.5,          // Camera field-of-view Y
     );
 
     rl.disable_cursor();
@@ -92,12 +92,13 @@ fn main() {
 
             let mut d = rl.begin_drawing(&thread);
 
-            let Ok(player) = game.player() else {
+            let Ok(camera_transform) = game.camera() else {
                 return;
             };
 
-            camera.target = (player.translation + player.rotation * Vec3::NEG_Z).into();
-            camera.position = player.translation.into();
+            camera.target =
+                (camera_transform.translation + camera_transform.rotation * Vec3::NEG_Z).into();
+            camera.position = camera_transform.translation.into();
             light_shader.set_view_pos(camera.position);
 
             d.clear_background(Color::GRAY);
