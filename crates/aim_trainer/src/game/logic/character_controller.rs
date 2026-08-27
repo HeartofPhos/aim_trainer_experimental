@@ -1,4 +1,4 @@
-use crate::game::{plugins::TimeFactor, utils::Direction};
+use crate::game::{logic::TimeFactor, utils::Direction};
 use avian3d::{
     math::{AdjustPrecision, AsF32, Dir, Scalar, Vector},
     prelude::*,
@@ -140,7 +140,6 @@ fn move_and_slide(
             &mut LinearVelocity,
             &Collider,
             &CollisionLayers,
-            &GlobalTransform,
             &TimeFactor,
         ),
         With<CharacterController>,
@@ -156,7 +155,6 @@ fn move_and_slide(
         mut lin_vel,
         collider,
         collision_layers,
-        global_transform,
         time_factor,
     ) in &mut query
     {
@@ -167,7 +165,7 @@ fn move_and_slide(
             collisions.0.clear();
         }
 
-        let up = global_transform.rotation() * Vec3::UP;
+        let up = transform.rotation * Vec3::UP;
 
         let move_and_slide_config = MoveAndSlideConfig {
             penetration_rejection_threshold: f32::INFINITY,

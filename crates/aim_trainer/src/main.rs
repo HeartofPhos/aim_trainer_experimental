@@ -1,5 +1,5 @@
 use crate::{
-    game::{Game, Input, plugins::level::PrimitiveCache},
+    game::{Game, Input, Render, logic::level::PrimitiveCache},
     light::{Light, LightShader, LightType},
 };
 use bevy::math::prelude::*;
@@ -73,6 +73,7 @@ fn main() {
                     _ => 0.0,
                 }
             }
+            input.fire = rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT);
             input.look += Vec2::from(rl.get_mouse_delta());
             input.movement = Vec3 {
                 x: dir(
@@ -91,6 +92,7 @@ fn main() {
             .normalize_or(Vec3::ZERO);
 
             let mut d = rl.begin_drawing(&thread);
+            d.clear_background(Color::GRAY);
 
             let Ok(camera_transform) = game.camera() else {
                 return;
@@ -101,26 +103,34 @@ fn main() {
             camera.position = camera_transform.translation.into();
             light_shader.set_view_pos(camera.position);
 
-            d.clear_background(Color::GRAY);
-
             {
                 let mut c = d.begin_mode3D(camera);
 
                 game.level_brushes(|brush_def, brush_transform| {
+                    if matches!(
+                        brush_def,
+                        BrushDef::Primitive {
+                            theme: schema::ThemeToken::Invisible,
+                            ..
+                        } | BrushDef::Spawn { .. }
+                    ) {
+                        return;
+                    }
+
                     draw_brush(&mut c, brush_def, brush_transform)
                 });
 
-                let color = Color::RED;
+                let color = Color::new(24, 24, 24, 255);
                 let resolution = 16;
-                game.shapes(|transform, shape| match shape {
-                    game::plugins::shape::Shape::Sphere(shape) => c.draw_sphere_ex(
+                game.shapes(|transform, shape, render| match (shape, render) {
+                    (game::logic::shape::Shape::Sphere(shape), Render::Shape) => c.draw_sphere_ex(
                         transform.translation,
                         shape.radius,
                         resolution,
                         resolution,
                         color,
                     ),
-                    game::plugins::shape::Shape::Capsule(shape) => c.draw_capsule(
+                    (game::logic::shape::Shape::Capsule(shape), Render::Shape) => c.draw_capsule(
                         transform.translation - Vec3::new(0.0, shape.half_length, 0.0),
                         transform.translation + Vec3::new(0.0, shape.half_length, 0.0),
                         shape.radius,
@@ -128,16 +138,30 @@ fn main() {
                         resolution,
                         color,
                     ),
-                    game::plugins::shape::Shape::Cylinder(shape) => c.draw_cylinder(
-                        transform.translation,
+                    (game::logic::shape::Shape::Cylinder(shape), Render::Shape) => c.draw_cylinder(
+                        transform.translation - shape.half_height,
                         shape.radius,
                         shape.radius,
                         shape.half_height * 2.0,
                         resolution,
                         color,
                     ),
+                    (_, Render::Radius) => c.draw_circle3D(
+                        transform.translation + Vec3::new(0.0, -shape.extents().y, 0.0),
+                        shape.radius(),
+                        Vector3::X,
+                        90.0,
+                        Color::WHITE,
+                    ),
                 });
             }
+
+            d.draw_circle(
+                d.get_render_width() / 2,
+                d.get_render_height() / 2,
+                4.0,
+                Color::new(0, 255, 255, 255),
+            );
 
             d.draw_fps(10, 10);
         },

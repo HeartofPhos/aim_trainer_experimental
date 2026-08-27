@@ -1,7 +1,7 @@
 use crate::game::{
     Input,
     config::SensitivityConfig,
-    plugins::{DriverSet, movement::MovementInput},
+    logic::{DriverSet, movement::MovementInput},
 };
 use bevy::prelude::*;
 

@@ -1,6 +1,6 @@
 use crate::game::{
     GameRng, Player,
-    plugins::{
+    logic::{
         DriverSet, TimeFactor,
         movement::{Facing, MovementInput, MovementProfile, SpeedThreshold, exclude_axes},
     },

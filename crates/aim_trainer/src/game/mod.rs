@@ -1,26 +1,30 @@
 use crate::game::{
     config::SensitivityConfig,
     layers::CollisionLayersExt,
-    plugins::{
+    logic::{
         TimeFactor,
         auto_driver::AutoDriver,
         character_controller::{CharacterController, GroundDetection},
+        health::health_bundle,
         input_driver::InputDriver,
         level::{BrushDef, PrimitiveCache},
         movement::{FacingOf, MovementProfile},
         shape::Shape,
         spawn::{SpawnLookup, Spawned, Spawner},
+        targeter::TargeterOf,
+        team::Team,
+        weapon::weapon_bundle,
     },
 };
 use avian3d::prelude::*;
 use bevy::{log::LogPlugin, prelude::*, time::TimeUpdateStrategy};
 use bevy_rand::plugin::EntropyPlugin;
-use schema::{SpawnGroup, SpawnRules, Team};
+use schema::{SpawnGroup, SpawnRules};
 use std::{path::PathBuf, time::Duration};
 
 mod config;
 mod layers;
-pub mod plugins;
+pub mod logic;
 mod utils;
 
 pub struct Game {
@@ -28,13 +32,22 @@ pub struct Game {
 }
 
 #[derive(Component)]
-struct Player;
-
-#[derive(Component)]
 struct Camera;
 
 #[derive(Component)]
+struct Player;
+
+#[derive(Component)]
 struct Bot;
+
+#[derive(Component)]
+struct Collectable;
+
+#[derive(Component, Clone, Copy)]
+pub enum Render {
+    Shape,
+    Radius,
+}
 
 #[derive(Event)]
 struct LoadScenario(PathBuf);
@@ -51,7 +64,7 @@ impl Game {
         app.insert_resource(Time::<Fixed>::from_duration(time_step));
         app.add_plugins(PhysicsPlugins::default());
         app.add_plugins(EntropyPlugin::<GameRng>::with_seed([0; 8]));
-        app.add_plugins(plugins::plugin);
+        app.add_plugins(logic::plugin);
 
         app.init_resource::<Time>();
         app.init_resource::<PrimitiveCache>();
@@ -113,15 +126,15 @@ impl Game {
         Ok((*transform).into())
     }
 
-    pub fn shapes(&self, mut f: impl FnMut(Transform, Shape)) {
+    pub fn shapes(&self, mut f: impl FnMut(Transform, Shape, Render)) {
         let mut query = self
             .app
             .world()
-            .try_query_filtered::<(&GlobalTransform, &Shape), ()>()
+            .try_query_filtered::<(&GlobalTransform, &Shape, &Render), ()>()
             .unwrap();
 
-        for (transform, shape) in query.iter(self.app.world()) {
-            f((*transform).into(), *shape);
+        for (transform, shape, render) in query.iter(self.app.world()) {
+            f((*transform).into(), *shape, *render);
         }
     }
 }
@@ -130,6 +143,7 @@ impl Game {
 pub struct Input {
     pub look: Vec2,
     pub movement: Vec3,
+    pub fire: bool,
 }
 
 fn load_scenario(
@@ -178,17 +192,17 @@ fn load_scenario(
             ))
             .id();
 
-        let (anchor, view) = if let Some(eyes) = character.eyes {
-            let anchor_transform = Transform::from_xyz(0.0, -shape.extents().y + eyes.height, 0.0);
-            let view_transform = Transform::from_xyz(0.0, 0.0, eyes.offset);
-
-            let anchor = commands.spawn((anchor_transform, ChildOf(entity))).id();
-            let view = commands.spawn((view_transform, ChildOf(anchor))).id();
-
-            (anchor, view)
+        let (anchor_transform, view_transform) = if let Some(eyes) = character.eyes {
+            (
+                Transform::from_xyz(0.0, -shape.extents().y + eyes.height, 0.0),
+                Transform::from_xyz(0.0, 0.0, eyes.offset),
+            )
         } else {
-            (entity, entity)
+            (Transform::default(), Transform::default())
         };
+
+        let anchor = commands.spawn((anchor_transform, ChildOf(entity))).id();
+        let view = commands.spawn((view_transform, ChildOf(anchor))).id();
 
         commands.entity(anchor).insert(FacingOf(entity));
 
@@ -201,20 +215,25 @@ fn load_scenario(
             spawn_group: SpawnGroup(0),
         })
         .observe(move |spawned: On<Spawned>, mut commands: Commands| {
+            let player = spawned.spawned;
+
             let view = character(
                 commands.reborrow(),
-                spawned.spawned,
+                player,
                 scenario.player.character,
                 scenario.player.movement,
             );
 
-            commands.entity(spawned.spawned).insert((
+            commands.entity(player).insert((
                 Player,
+                Team(schema::Team::PLAYER),
+                Render::Shape,
                 InputDriver,
-                CollisionLayers::character(Team::PLAYER),
+                CollisionLayers::character(schema::Team::PLAYER),
+                weapon_bundle(scenario.weapon),
             ));
 
-            commands.entity(view).insert(Camera);
+            commands.entity(view).insert((Camera, TargeterOf(player)));
         });
 
     if let Some(bot_template) = scenario.bot_template {
@@ -224,17 +243,58 @@ fn load_scenario(
                 spawn_group: SpawnGroup(1),
             })
             .observe(move |spawned: On<Spawned>, mut commands: Commands| {
+                let bot = spawned.spawned;
+
+                character(
+                    commands.reborrow(),
+                    bot,
+                    bot_template.character,
+                    bot_template.movement,
+                );
+
+                commands.entity(bot).insert((
+                    Bot,
+                    Team(schema::Team::BOT),
+                    Render::Shape,
+                    AutoDriver::from(bot_template.driver.clone()),
+                    CollisionLayers::character(schema::Team::BOT),
+                    health_bundle(bot_template.health.into()),
+                ));
+            });
+    }
+
+    if let Some(collectable_template) = scenario.collectable_template {
+        commands
+            .spawn(Spawner {
+                spawn_rules: collectable_template.spawn_rules,
+                spawn_group: SpawnGroup(0),
+            })
+            .observe(move |spawned: On<Spawned>, mut commands: Commands| {
                 character(
                     commands.reborrow(),
                     spawned.spawned,
-                    scenario.player.character,
-                    scenario.player.movement,
+                    collectable_template.character,
+                    collectable_template.movement,
                 );
 
-                commands.entity(spawned.spawned).insert((
-                    Bot,
-                    AutoDriver::from(bot_template.driver.clone()),
-                    CollisionLayers::character(Team::BOT),
+                let collectable = commands
+                    .entity(spawned.spawned)
+                    .insert((
+                        Collectable,
+                        AutoDriver::from(collectable_template.driver.clone()),
+                        CollisionLayers::collectable(),
+                    ))
+                    .id();
+
+                let collectable_sensor_shape = Shape::from(collectable_template.shape);
+                commands.spawn((
+                    collectable_sensor_shape,
+                    Render::Radius,
+                    Sensor,
+                    CollisionLayers::collectable_sensor(),
+                    CollisionEventsEnabled,
+                    Transform::IDENTITY,
+                    ChildOf(collectable),
                 ));
             });
     }

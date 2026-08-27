@@ -1,6 +1,6 @@
 use crate::game::{
     GameRng, Transform,
-    plugins::{SpawnSet, shape::ShapeExtents},
+    logic::{SpawnSet, shape::ShapeExtents},
     utils::weighted_random,
 };
 use bevy::prelude::*;
@@ -140,8 +140,8 @@ fn move_to_spawn(
         commands
             .entity(entity)
             .insert(Transform {
-                rotation,
                 translation,
+                rotation,
                 ..Default::default()
             })
             .remove::<MoveToSpawn>();

@@ -1,6 +1,6 @@
 use crate::game::{
     Transform,
-    plugins::{MovementSet, TimeFactor, character_controller::Grounded},
+    logic::{MovementSet, TimeFactor, character_controller::Grounded},
     utils::Direction,
 };
 use avian3d::prelude::*;

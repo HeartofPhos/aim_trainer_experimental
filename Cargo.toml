@@ -6,6 +6,7 @@ members = ["crates/aim_trainer", "crates/ref_asset", "crates/schema"]
 bevy = { version = "0.19", default-features = false, features = [
     "bevy_log",
     "debug",
+    "track_location",
 ] }
 bevy_math = { version = "0.19" }
 
