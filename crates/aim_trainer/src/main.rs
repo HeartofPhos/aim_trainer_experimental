@@ -1,6 +1,7 @@
 use crate::{
+    fill_bar::FillBarShader,
     input::InputAggregator,
-    light::{Light, LightShader, LightType},
+    light::{LightShader, LightType},
 };
 use aim_game::{
     Game, Input, Render,
@@ -14,17 +15,22 @@ use std::{
     time::{Duration, Instant},
 };
 
+mod fill_bar;
 mod input;
 mod light;
+mod shader;
 
 struct SensitivityConfig {
     sensitivity: f32,
     sensitivity_factor: f32,
 }
 
+const DEFAULT_FILL_BAR_SIZE: Vec3 = Vec3::new(0.75, 0.15, 1.0);
+const FILL_BAR_OFFSET: Vec3 = Vec3::new(0.0, 0.05, 0.0);
+
 fn main() {
     let time_step = Duration::from_secs_f32(1.0 / 256.0);
-    let scenario_path = ref_asset::paths::scenario("flick-static");
+    let scenario_path = ref_asset::paths::scenario("switch");
     let (scenario, _): (schema::Scenario, _) =
         ref_asset::io::read_file(scenario_path).expect("failed to load scenario");
 
@@ -38,18 +44,20 @@ fn main() {
     rl.toggle_borderless_windowed();
 
     let mut light_shader = LightShader::<1>::new(&mut rl, &thread);
-    let brightness = Vector4::new(0.1, 0.1, 0.1, 1.0);
-    light_shader.set_ambient(Vector4::from(Color::WHITE) * brightness);
-    light_shader.set_light(
-        0,
-        Light {
-            light_type: LightType::Directional,
-            enabled: true,
-            position: Vector3::new(2.0, 3.0, 2.0),
-            target: Vector3::zero(),
-            color: Vector4::from(Color::WHITE) * brightness,
-        },
-    );
+    {
+        let brightness = Vector4::new(0.1, 0.1, 0.1, 1.0);
+
+        light_shader
+            .ambient
+            .set(Vector4::from(Color::WHITE) * brightness);
+
+        let light = &mut light_shader.lights[0];
+        light.ty.set(LightType::Directional);
+        light.enabled.set(true);
+        light.position.set(Vector3::new(2.0, 3.0, 2.0));
+        light.target.set(Vector3::zero());
+        light.color.set(Vector4::from(Color::WHITE) * brightness);
+    }
 
     let mut mat_a = rl.load_material_default(&thread);
     mat_a.set_map_color(ffi::MaterialMapIndex::MATERIAL_MAP_ALBEDO, Color::WHITE);
@@ -61,6 +69,31 @@ fn main() {
         Color::GREEN.alpha(0.1),
     );
     mat_b.set_shader(light_shader.shader());
+
+    let mut fill_bar_shader = FillBarShader::new(&mut rl, &thread);
+    {
+        fill_bar_shader.border_radius.set(0.01);
+        fill_bar_shader.rounding_factor.set(1.0);
+        fill_bar_shader
+            .fill_color
+            .set(Vector4::new(1.0, 1.0, 1.0, 1.0));
+        fill_bar_shader
+            .border_color
+            .set(Vector4::new(0.1, 0.1, 0.1, 1.0));
+        fill_bar_shader
+            .empty_color
+            .set(Vector4::new(0.1, 0.1, 0.1, 1.0));
+        fill_bar_shader.fill.set(0.1);
+        fill_bar_shader.fill_axis.set(0);
+        fill_bar_shader.fill_flip.set(0);
+
+        fill_bar_shader.upload();
+    }
+
+    let mut fill_bar_mat = rl.load_material_default(&thread);
+    fill_bar_mat.set_shader(fill_bar_shader.shader());
+
+    let fill_bar_mesh = build_quad(&thread);
 
     let draw_brush = build_draw_brush(&thread, game.primitive_cache(), mat_a, mat_b);
 
@@ -122,7 +155,9 @@ fn main() {
             camera.target =
                 (camera_transform.translation + camera_transform.rotation * Vec3::NEG_Z).into();
             camera.position = camera_transform.translation.into();
-            light_shader.set_view_pos(camera.position);
+
+            light_shader.view_pos.set(camera.position);
+            light_shader.upload();
 
             {
                 let mut c = d.begin_mode3D(camera);
@@ -143,37 +178,58 @@ fn main() {
 
                 let color = Color::new(24, 24, 24, 255);
                 let resolution = 16;
-                game.shapes(|transform, shape, render| match (shape, render) {
-                    (Shape::Sphere(shape), Render::Shape) => c.draw_sphere_ex(
-                        transform.translation,
-                        shape.radius,
-                        resolution,
-                        resolution,
-                        color,
-                    ),
-                    (Shape::Capsule(shape), Render::Shape) => c.draw_capsule(
-                        transform.translation - Vec3::new(0.0, shape.half_length, 0.0),
-                        transform.translation + Vec3::new(0.0, shape.half_length, 0.0),
-                        shape.radius,
-                        resolution,
-                        resolution,
-                        color,
-                    ),
-                    (Shape::Cylinder(shape), Render::Shape) => c.draw_cylinder(
-                        transform.translation - shape.half_height,
-                        shape.radius,
-                        shape.radius,
-                        shape.half_height * 2.0,
-                        resolution,
-                        color,
-                    ),
-                    (_, Render::Radius) => c.draw_circle3D(
-                        transform.translation + Vec3::new(0.0, -shape.extents().y, 0.0),
-                        shape.radius(),
-                        Vector3::X,
-                        90.0,
-                        Color::WHITE,
-                    ),
+                game.shapes(|transform, shape, render, health| {
+                    match (shape, render) {
+                        (Shape::Sphere(shape), Render::Shape) => c.draw_sphere_ex(
+                            transform.translation,
+                            shape.radius,
+                            resolution,
+                            resolution,
+                            color,
+                        ),
+                        (Shape::Capsule(shape), Render::Shape) => c.draw_capsule(
+                            transform.translation - Vec3::new(0.0, shape.half_length, 0.0),
+                            transform.translation + Vec3::new(0.0, shape.half_length, 0.0),
+                            shape.radius,
+                            resolution,
+                            resolution,
+                            color,
+                        ),
+                        (Shape::Cylinder(shape), Render::Shape) => c.draw_cylinder(
+                            transform.translation - shape.half_height,
+                            shape.radius,
+                            shape.radius,
+                            shape.half_height * 2.0,
+                            resolution,
+                            color,
+                        ),
+                        (_, Render::Radius) => c.draw_circle3D(
+                            transform.translation + Vec3::new(0.0, -shape.extents().y, 0.0),
+                            shape.radius(),
+                            Vector3::X,
+                            90.0,
+                            Color::WHITE,
+                        ),
+                    }
+
+                    if let Some(health) = health {
+                        let scale = DEFAULT_FILL_BAR_SIZE;
+                        let offset = Vec3::new(0.0, shape.extents().y + scale.y * 0.5, 0.0)
+                            + FILL_BAR_OFFSET;
+
+                        fill_bar_shader.fill.set(health.ratio());
+                        fill_bar_shader.upload();
+
+                        c.draw_mesh(
+                            &fill_bar_mesh,
+                            fill_bar_mat.clone(),
+                            Mat4::from_scale_rotation_translation(
+                                scale,
+                                Quat::IDENTITY,
+                                transform.translation + offset,
+                            ),
+                        );
+                    }
                 });
             }
 
@@ -275,6 +331,32 @@ fn build_mesh(
 
     Mesh::gen_mesh(&vertices, &tex)
         .normals(&normals)
+        .build(thread)
+        .expect("invalid mesh")
+}
+
+fn build_quad(thread: &RaylibThread) -> Mesh {
+    let offset = Vector3::new(-0.5, -0.5, 0.0);
+    let vertices = [
+        Vector3::new(1.0, 1.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(1.0, 1.0, 0.0),
+    ]
+    .map(|v| v + offset);
+
+    let uv = [
+        Vector2::new(1.0, 1.0),
+        Vector2::new(0.0, 1.0),
+        Vector2::new(0.0, 0.0),
+        Vector2::new(0.0, 0.0),
+        Vector2::new(1.0, 0.0),
+        Vector2::new(1.0, 1.0),
+    ];
+
+    Mesh::gen_mesh(&vertices, &uv)
         .build(thread)
         .expect("invalid mesh")
 }

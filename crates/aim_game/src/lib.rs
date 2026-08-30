@@ -4,7 +4,7 @@ use crate::{
         TimeFactor,
         auto_driver::AutoDriver,
         character_controller::{CharacterController, GroundDetection},
-        health::health_bundle,
+        health::{Health, health_bundle},
         input_driver::InputDriver,
         level::{BrushDef, PrimitiveCache},
         movement::{FacingOf, MovementProfile},
@@ -117,15 +117,15 @@ impl Game {
         Ok((*transform).into())
     }
 
-    pub fn shapes(&self, mut f: impl FnMut(Transform, Shape, Render)) {
+    pub fn shapes(&self, mut f: impl FnMut(Transform, Shape, Render, Option<Health>)) {
         let mut query = self
             .app
             .world()
-            .try_query_filtered::<(&GlobalTransform, &Shape, &Render), ()>()
+            .try_query_filtered::<(&GlobalTransform, &Shape, &Render, Option<&Health>), ()>()
             .unwrap();
 
-        for (transform, shape, render) in query.iter(self.app.world()) {
-            f((*transform).into(), *shape, *render);
+        for (transform, shape, render, health) in query.iter(self.app.world()) {
+            f((*transform).into(), *shape, *render, health.copied());
         }
     }
 }

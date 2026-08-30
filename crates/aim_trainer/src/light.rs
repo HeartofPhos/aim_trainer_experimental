@@ -1,3 +1,4 @@
+use crate::shader::ShaderLoc;
 use raylib::prelude::*;
 
 #[repr(i32)]
@@ -8,29 +9,26 @@ pub enum LightType {
     Point = 1,
 }
 
-#[derive(Clone, Copy)]
-pub struct Light {
-    pub light_type: LightType,
-    pub enabled: bool,
-    pub position: Vector3,
-    pub target: Vector3,
-    pub color: Vector4,
+impl From<LightType> for i32 {
+    fn from(value: LightType) -> Self {
+        value as i32
+    }
 }
 
 #[derive(Default, Clone, Copy)]
-struct LightLoc {
-    enabled_loc: i32,
-    type_loc: i32,
-    position_loc: i32,
-    target_loc: i32,
-    color_loc: i32,
+pub struct LightLoc {
+    pub enabled: ShaderLoc<bool, i32>,
+    pub ty: ShaderLoc<LightType, i32>,
+    pub position: ShaderLoc<Vector3>,
+    pub target: ShaderLoc<Vector3>,
+    pub color: ShaderLoc<Vector4>,
 }
 
 pub struct LightShader<const MAX_LIGHTS: usize> {
     shader: Shader,
-    view_loc: i32,
-    ambient_loc: i32,
-    light_locs: [LightLoc; MAX_LIGHTS],
+    pub view_pos: ShaderLoc<Vector3>,
+    pub ambient: ShaderLoc<Vector4>,
+    pub lights: [LightLoc; MAX_LIGHTS],
 }
 
 impl<const MAX_LIGHTS: usize> LightShader<MAX_LIGHTS> {
@@ -41,53 +39,40 @@ impl<const MAX_LIGHTS: usize> LightShader<MAX_LIGHTS> {
             Some("assets/shaders/lighting.fs.glsl"),
         );
 
-        let ambient_loc = shader.get_shader_location("ambient");
-        let view_loc = shader.get_shader_location("viewPos");
-
-        let mut light_locs = [LightLoc::default(); MAX_LIGHTS];
+        let mut lights = [LightLoc::default(); MAX_LIGHTS];
 
         for i in 0..MAX_LIGHTS {
-            light_locs[i] = LightLoc {
-                enabled_loc: shader.get_shader_location(&format!("lights[{}].enabled", i)),
-                type_loc: shader.get_shader_location(&format!("lights[{}].type", i)),
-                position_loc: shader.get_shader_location(&format!("lights[{}].position", i)),
-                target_loc: shader.get_shader_location(&format!("lights[{}].target", i)),
-                color_loc: shader.get_shader_location(&format!("lights[{}].color", i)),
+            lights[i] = LightLoc {
+                enabled: ShaderLoc::new(&shader, &format!("lights[{}].enabled", i)),
+                ty: ShaderLoc::new(&shader, &format!("lights[{}].type", i)),
+                position: ShaderLoc::new(&shader, &format!("lights[{}].position", i)),
+                target: ShaderLoc::new(&shader, &format!("lights[{}].target", i)),
+                color: ShaderLoc::new(&shader, &format!("lights[{}].color", i)),
             };
         }
 
         Self {
+            view_pos: ShaderLoc::new(&shader, "viewPos"),
+            ambient: ShaderLoc::new(&shader, "ambient"),
+            lights,
             shader,
-            view_loc,
-            ambient_loc,
-            light_locs,
+        }
+    }
+
+    pub fn upload(&mut self) {
+        self.view_pos.upload(&mut self.shader);
+        self.ambient.upload(&mut self.shader);
+
+        for i in 0..MAX_LIGHTS {
+            self.lights[i].enabled.upload(&mut self.shader);
+            self.lights[i].ty.upload(&mut self.shader);
+            self.lights[i].position.upload(&mut self.shader);
+            self.lights[i].target.upload(&mut self.shader);
+            self.lights[i].color.upload(&mut self.shader);
         }
     }
 
     pub fn shader(&self) -> &Shader {
         &self.shader
-    }
-
-    pub fn set_view_pos(&mut self, p: Vector3) {
-        self.shader.set_shader_value(self.view_loc, p);
-    }
-
-    pub fn set_ambient(&mut self, c: Vector4) {
-        self.shader.set_shader_value(self.ambient_loc, c);
-    }
-
-    pub fn set_light(&mut self, i: usize, light: Light) {
-        let light_loc = self.light_locs[i];
-
-        self.shader
-            .set_shader_value(light_loc.enabled_loc, light.enabled as i32);
-        self.shader
-            .set_shader_value(light_loc.type_loc, light.light_type as i32);
-        self.shader
-            .set_shader_value(light_loc.position_loc, light.position);
-        self.shader
-            .set_shader_value(light_loc.target_loc, light.target);
-        self.shader
-            .set_shader_value(light_loc.color_loc, light.color);
     }
 }
