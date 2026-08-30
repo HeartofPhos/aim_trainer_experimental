@@ -1,0 +1,19 @@
+[package]
+name = "aim_game"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { workspace = true }
+avian3d = { workspace = true }
+bevy_rand = { workspace = true }
+rand = { workspace = true }
+derive_more = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+extend = { workspace = true }
+
+schema = { path = "../schema" }
+
+[lints]
+workspace = true

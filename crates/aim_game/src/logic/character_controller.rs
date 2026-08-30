@@ -1,4 +1,4 @@
-use crate::game::{logic::TimeFactor, utils::Direction};
+use crate::{logic::TimeFactor, utils::Direction};
 use avian3d::{
     math::{AdjustPrecision, AsF32, Dir, Scalar, Vector},
     prelude::*,

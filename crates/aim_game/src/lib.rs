@@ -1,5 +1,4 @@
-use crate::game::{
-    config::SensitivityConfig,
+use crate::{
     layers::CollisionLayersExt,
     logic::{
         TimeFactor,
@@ -17,12 +16,11 @@ use crate::game::{
     },
 };
 use avian3d::prelude::*;
-use bevy::{log::LogPlugin, prelude::*, time::TimeUpdateStrategy};
+use bevy::{ecs::system::RunSystemOnce, log::LogPlugin, prelude::*, time::TimeUpdateStrategy};
 use bevy_rand::plugin::EntropyPlugin;
-use schema::{SpawnGroup, SpawnRules};
-use std::{path::PathBuf, time::Duration};
+use schema::{Scenario, SpawnGroup, SpawnRules};
+use std::time::Duration;
 
-mod config;
 mod layers;
 pub mod logic;
 mod utils;
@@ -49,13 +47,10 @@ pub enum Render {
     Radius,
 }
 
-#[derive(Event)]
-struct LoadScenario(PathBuf);
-
 pub type GameRng = bevy_rand::prelude::WyRand;
 
 impl Game {
-    pub fn new(scenario_path: impl Into<PathBuf>, time_step: Duration) -> Self {
+    pub fn new(scenario: Scenario, time_step: Duration) -> Self {
         let mut app = App::new();
 
         app.add_plugins(MinimalPlugins);
@@ -69,14 +64,10 @@ impl Game {
         app.init_resource::<Time>();
         app.init_resource::<PrimitiveCache>();
         app.init_resource::<SpawnLookup>();
-        app.insert_resource(SensitivityConfig(schema::SensitivityConfig {
-            sensitivity: 1.0,
-            sensitivity_factor: 0.022,
-        }));
 
-        app.add_observer(load_scenario);
-
-        app.world_mut().trigger(LoadScenario(scenario_path.into()));
+        app.world_mut()
+            .run_system_once_with(load_scenario, scenario)
+            .expect("failed to load scenario");
 
         app.finish();
 
@@ -147,12 +138,10 @@ pub struct Input {
 }
 
 fn load_scenario(
-    load_scenario: On<LoadScenario>,
+    In(scenario): In<Scenario>,
     mut commands: Commands,
     mut spawn_lookup: ResMut<SpawnLookup>,
-) -> Result {
-    let (scenario, _): (schema::Scenario, _) = ref_asset::io::read_file(&load_scenario.0)?;
-
+) {
     for brush in scenario.level.brush_list {
         match brush.def {
             schema::BrushDef::Spawn { group } => {
@@ -298,6 +287,4 @@ fn load_scenario(
                 ));
             });
     }
-
-    Ok(())
 }

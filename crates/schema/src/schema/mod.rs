@@ -28,12 +28,6 @@ pub struct Scenario {
     pub collectable_template: Option<CollectableTemplate>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct SensitivityConfig {
-    pub sensitivity: f32,
-    pub sensitivity_factor: f32,
-}
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Real {
     Infinity,

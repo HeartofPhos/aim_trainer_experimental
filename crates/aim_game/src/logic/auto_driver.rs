@@ -1,4 +1,4 @@
-use crate::game::{
+use crate::{
     GameRng, Player,
     logic::{
         DriverSet, TimeFactor,

@@ -1,4 +1,4 @@
-use crate::game::layers::CollisionLayersExt;
+use crate::layers::CollisionLayersExt;
 use avian3d::prelude::*;
 use bevy::{platform::collections::HashMap, prelude::*};
 use derive_more::Deref;

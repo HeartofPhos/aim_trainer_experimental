@@ -1,4 +1,4 @@
-use crate::game::{
+use crate::{
     GameRng, Transform,
     logic::{SpawnSet, shape::ShapeExtents},
     utils::weighted_random,

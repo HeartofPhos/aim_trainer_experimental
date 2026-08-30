@@ -1,4 +1,4 @@
-use crate::game::logic::weapon::{ShotDone, ShotResult};
+use crate::logic::weapon::{ShotDone, ShotResult};
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {

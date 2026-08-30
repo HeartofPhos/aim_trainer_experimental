@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "aim_trainer"
+name = "aim_game"
 version = "0.1.0"
 dependencies = [
  "avian3d",
@@ -31,10 +31,19 @@ dependencies = [
  "extend",
  "log",
  "rand",
+ "schema",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "aim_trainer"
+version = "0.1.0"
+dependencies = [
+ "aim_game",
+ "bevy_math",
  "raylib",
  "ref_asset",
  "schema",
- "thiserror 2.0.20",
 ]
 
 [[package]]

@@ -1,8 +1,12 @@
 use crate::{
-    game::{Game, Input, Render, logic::level::PrimitiveCache},
+    input::InputAggregator,
     light::{Light, LightShader, LightType},
 };
-use bevy::math::prelude::*;
+use aim_game::{
+    Game, Input, Render,
+    logic::{level::PrimitiveCache, shape::Shape},
+};
+use bevy_math::prelude::*;
 use raylib::prelude::*;
 use schema::{BrushDef, BrushTransform, Primitive};
 use std::{
@@ -10,12 +14,25 @@ use std::{
     time::{Duration, Instant},
 };
 
-mod game;
+mod input;
 mod light;
+
+struct SensitivityConfig {
+    sensitivity: f32,
+    sensitivity_factor: f32,
+}
 
 fn main() {
     let time_step = Duration::from_secs_f32(1.0 / 256.0);
-    let game = Game::new(ref_asset::paths::scenario("track-move"), time_step);
+    let scenario_path = ref_asset::paths::scenario("flick-static");
+    let (scenario, _): (schema::Scenario, _) =
+        ref_asset::io::read_file(scenario_path).expect("failed to load scenario");
+
+    let game = Game::new(scenario, time_step);
+    let sensitivity_config = SensitivityConfig {
+        sensitivity: 1.0,
+        sensitivity_factor: 0.022,
+    };
 
     let (mut rl, thread) = raylib::init().title("aim_trainer").log_to_rust().build();
     rl.toggle_borderless_windowed();
@@ -60,10 +77,9 @@ fn main() {
         rl,
         time_step,
         game,
-        Input::default(),
+        InputAggregator::default(),
         |rl, game, input, elapsed, delta_time| {
-            game.update(delta_time, *input);
-            input.look = Default::default();
+            game.update(delta_time, input.take());
         },
         |rl, game, input, elapsed, delta_time| {
             fn dir(neg: bool, pos: bool) -> f32 {
@@ -73,23 +89,28 @@ fn main() {
                     _ => 0.0,
                 }
             }
-            input.fire = rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT);
-            input.look += Vec2::from(rl.get_mouse_delta());
-            input.movement = Vec3 {
-                x: dir(
-                    rl.is_key_down(KeyboardKey::KEY_A),
-                    rl.is_key_down(KeyboardKey::KEY_D),
-                ),
-                y: dir(
-                    rl.is_key_down(KeyboardKey::KEY_LEFT_CONTROL),
-                    rl.is_key_down(KeyboardKey::KEY_SPACE),
-                ),
-                z: dir(
-                    rl.is_key_down(KeyboardKey::KEY_W),
-                    rl.is_key_down(KeyboardKey::KEY_S),
-                ),
-            }
-            .normalize_or(Vec3::ZERO);
+
+            input.push(Input {
+                look: Vec2::from(rl.get_mouse_delta())
+                    * sensitivity_config.sensitivity
+                    * sensitivity_config.sensitivity_factor,
+                movement: Vec3 {
+                    x: dir(
+                        rl.is_key_down(KeyboardKey::KEY_A),
+                        rl.is_key_down(KeyboardKey::KEY_D),
+                    ),
+                    y: dir(
+                        rl.is_key_down(KeyboardKey::KEY_LEFT_CONTROL),
+                        rl.is_key_down(KeyboardKey::KEY_SPACE),
+                    ),
+                    z: dir(
+                        rl.is_key_down(KeyboardKey::KEY_W),
+                        rl.is_key_down(KeyboardKey::KEY_S),
+                    ),
+                }
+                .normalize_or(Vec3::ZERO),
+                fire: rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT),
+            });
 
             let mut d = rl.begin_drawing(&thread);
             d.clear_background(Color::GRAY);
@@ -123,14 +144,14 @@ fn main() {
                 let color = Color::new(24, 24, 24, 255);
                 let resolution = 16;
                 game.shapes(|transform, shape, render| match (shape, render) {
-                    (game::logic::shape::Shape::Sphere(shape), Render::Shape) => c.draw_sphere_ex(
+                    (Shape::Sphere(shape), Render::Shape) => c.draw_sphere_ex(
                         transform.translation,
                         shape.radius,
                         resolution,
                         resolution,
                         color,
                     ),
-                    (game::logic::shape::Shape::Capsule(shape), Render::Shape) => c.draw_capsule(
+                    (Shape::Capsule(shape), Render::Shape) => c.draw_capsule(
                         transform.translation - Vec3::new(0.0, shape.half_length, 0.0),
                         transform.translation + Vec3::new(0.0, shape.half_length, 0.0),
                         shape.radius,
@@ -138,7 +159,7 @@ fn main() {
                         resolution,
                         color,
                     ),
-                    (game::logic::shape::Shape::Cylinder(shape), Render::Shape) => c.draw_cylinder(
+                    (Shape::Cylinder(shape), Render::Shape) => c.draw_cylinder(
                         transform.translation - shape.half_height,
                         shape.radius,
                         shape.radius,

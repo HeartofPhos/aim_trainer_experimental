@@ -1,4 +1,4 @@
-use crate::game::{
+use crate::{
     Input,
     layers::CollisionLayersExt,
     logic::{WeaponSet, health::Killed, targeter::UseTargeter, team::Team},

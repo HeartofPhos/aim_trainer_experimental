@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/aim_trainer", "crates/ref_asset", "crates/schema"]
+members = ["crates/aim_game","crates/aim_trainer", "crates/ref_asset", "crates/schema"]
 
 [workspace.dependencies]
 bevy = { version = "0.19", default-features = false, features = [
