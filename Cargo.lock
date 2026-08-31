@@ -24,11 +24,13 @@ dependencies = [
 name = "aim_game"
 version = "0.1.0"
 dependencies = [
+ "approx",
  "avian3d",
  "bevy",
  "bevy_rand",
  "derive_more",
  "extend",
+ "jiff",
  "log",
  "rand",
  "schema",
@@ -2246,10 +2248,12 @@ dependencies = [
  "jiff-core",
  "jiff-static",
  "jiff-tzdb-platform",
+ "js-sys",
  "log",
  "portable-atomic",
  "portable-atomic-util",
  "serde_core",
+ "wasm-bindgen",
  "windows-link",
 ]
 

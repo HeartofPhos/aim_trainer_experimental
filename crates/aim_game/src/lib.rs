@@ -3,6 +3,10 @@ use crate::{
     logic::{
         TimeFactor,
         auto_driver::AutoDriver,
+        challenge::{
+            Challenge, ChallengeValue, CollectProfile, CollectableSensor, ScalableComponent,
+            challenge_bundle,
+        },
         character_controller::{CharacterController, GroundDetection},
         health::{Health, health_bundle},
         input_driver::InputDriver,
@@ -64,6 +68,7 @@ impl Game {
         app.init_resource::<Time>();
         app.init_resource::<PrimitiveCache>();
         app.init_resource::<SpawnLookup>();
+        app.insert_resource(Challenge::new(ChallengeValue::default()));
 
         app.world_mut()
             .run_system_once_with(load_scenario, scenario)
@@ -128,6 +133,10 @@ impl Game {
             f((*transform).into(), *shape, *render, health.copied());
         }
     }
+
+    pub fn challenge(&self) -> f32 {
+        self.app.world().resource::<Challenge>().value().log()
+    }
 }
 
 #[derive(Resource, Default, Clone, Copy)]
@@ -167,14 +176,16 @@ fn load_scenario(
         entity: Entity,
         character: schema::CharacterTemplate,
         movement: schema::MovementProfile,
+        size_scaling: Option<schema::ChallengeScaling>,
+        time_scaling: Option<schema::ChallengeScaling>,
     ) -> Entity {
         let shape = Shape::from(character.shape);
 
         let entity = commands
             .entity(entity)
             .insert((
-                shape,
-                TimeFactor::default(),
+                shape.with_scaling(size_scaling),
+                TimeFactor(1.0).with_scaling(time_scaling),
                 MovementProfile(movement),
                 CharacterController,
                 GroundDetection::default(),
@@ -211,6 +222,8 @@ fn load_scenario(
                 player,
                 scenario.player.character,
                 scenario.player.movement,
+                None,
+                None,
             );
 
             commands.entity(player).insert((
@@ -220,6 +233,7 @@ fn load_scenario(
                 InputDriver,
                 CollisionLayers::character(schema::Team::PLAYER),
                 weapon_bundle(scenario.weapon),
+                challenge_bundle(scenario.challenge),
             ));
 
             commands.entity(view).insert((Camera, TargeterOf(player)));
@@ -239,6 +253,8 @@ fn load_scenario(
                     bot,
                     bot_template.character,
                     bot_template.movement,
+                    Some(bot_template.size_scaling),
+                    Some(bot_template.time_scaling),
                 );
 
                 commands.entity(bot).insert((
@@ -264,6 +280,8 @@ fn load_scenario(
                     spawned.spawned,
                     collectable_template.character,
                     collectable_template.movement,
+                    None,
+                    None,
                 );
 
                 let collectable = commands
@@ -277,9 +295,9 @@ fn load_scenario(
 
                 let collectable_sensor_shape = Shape::from(collectable_template.shape);
                 commands.spawn((
+                    CollectableSensor,
                     collectable_sensor_shape,
                     Render::Radius,
-                    Sensor,
                     CollisionLayers::collectable_sensor(),
                     CollisionEventsEnabled,
                     Transform::IDENTITY,

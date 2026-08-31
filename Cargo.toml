@@ -19,7 +19,12 @@ avian3d = { version = "0.7.0", default-features = false, features = [
 ] }
 bevy_rand = { version = "0.15", features = ["wyrand"] }
 rand = { version = "0.10", default-features = false }
-derive_more = { version = "2.1" }
+derive_more = { version = "2", default-features = false, features = [
+    "from",
+    "mul",
+    "eq",
+    "debug",
+] }
 serde = { version = "^1.0.220", features = ["derive"] }
 serde_json = { version = "1.0.145", features = [
     "arbitrary_precision",
@@ -33,6 +38,8 @@ log = { version = "*", features = [
     "release_max_level_warn",
 ] }
 extend = "1.2"
+jiff = { version = "0.2", features = ["js"] }
+approx = "0.5"
 
 [patch.crates-io]
 raylib = { git = 'https://github.com/HeartofPhos/raylib-rs.git', branch = 'unstable' }

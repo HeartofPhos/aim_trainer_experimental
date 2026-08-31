@@ -73,6 +73,24 @@ impl From<schema::Shape> for Shape {
     }
 }
 
+impl From<Shape> for schema::Shape {
+    fn from(value: Shape) -> Self {
+        match value {
+            Shape::Sphere(shape) => schema::Shape::Sphere {
+                radius: shape.radius,
+            },
+            Shape::Capsule(shape) => schema::Shape::Capsule {
+                radius: shape.radius,
+                height: (shape.half_length + shape.radius) * 2.0,
+            },
+            Shape::Cylinder(shape) => schema::Shape::Cylinder {
+                radius: shape.radius,
+                height: shape.half_height * 2.0,
+            },
+        }
+    }
+}
+
 impl From<&Shape> for Collider {
     fn from(value: &Shape) -> Self {
         match value {

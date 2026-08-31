@@ -1,7 +1,9 @@
+use crate::logic::challenge::ChallengeSet;
 use avian3d::schedule::PhysicsSystems;
 use bevy::prelude::*;
 
 pub mod auto_driver;
+pub mod challenge;
 pub mod character_controller;
 pub mod health;
 pub mod input_driver;
@@ -16,6 +18,7 @@ pub mod weapon;
 pub fn plugin(app: &mut App) {
     app.add_plugins(auto_driver::plugin);
     app.add_plugins(character_controller::plugin);
+    app.add_plugins(challenge::plugin);
     app.add_plugins(health::plugin);
     app.add_plugins(input_driver::plugin);
     app.add_plugins(level::plugin);
@@ -27,6 +30,8 @@ pub fn plugin(app: &mut App) {
     app.configure_sets(
         FixedUpdate,
         (
+            ChallengeSet::Accumulate,
+            ChallengeSet::Update,
             SpawnSet::Spawn,
             SpawnSet::Move,
             WeaponSet,
@@ -57,11 +62,5 @@ pub enum SpawnSet {
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WeaponSet;
 
-#[derive(Component)]
-pub struct TimeFactor(f32);
-
-impl Default for TimeFactor {
-    fn default() -> Self {
-        Self(1.0)
-    }
-}
+#[derive(Component, Clone, Copy)]
+pub struct TimeFactor(pub f32);

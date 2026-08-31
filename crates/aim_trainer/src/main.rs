@@ -30,7 +30,7 @@ const FILL_BAR_OFFSET: Vec3 = Vec3::new(0.0, 0.05, 0.0);
 
 fn main() {
     let time_step = Duration::from_secs_f32(1.0 / 256.0);
-    let scenario_path = ref_asset::paths::scenario("switch");
+    let scenario_path = ref_asset::paths::scenario("track-move");
     let (scenario, _): (schema::Scenario, _) =
         ref_asset::io::read_file(scenario_path).expect("failed to load scenario");
 
@@ -241,6 +241,16 @@ fn main() {
             );
 
             d.draw_fps(10, 10);
+            let challenge_text = format!("{:.2}", game.challenge());
+            let font_size = 20;
+            let m = d.measure_text(&challenge_text, font_size);
+            d.draw_text(
+                &challenge_text,
+                (d.get_screen_width() - m) / 2,
+                10,
+                font_size,
+                Color::WHITE,
+            );
         },
     );
 }

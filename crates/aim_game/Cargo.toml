@@ -12,8 +12,12 @@ derive_more = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
 extend = { workspace = true }
+jiff = { workspace = true }
 
 schema = { path = "../schema" }
+
+[dev-dependencies]
+approx = { workspace = true }
 
 [lints]
 workspace = true
