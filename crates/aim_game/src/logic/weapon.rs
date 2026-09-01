@@ -103,7 +103,7 @@ enum InputState {
     Fired,
 }
 
-fn input(input: Res<Input>, mut query: Query<&mut WeaponInput>) -> Result {
+fn input(input: Res<Input>, query: Query<&mut WeaponInput>) -> Result {
     for mut weapon_input in query {
         weapon_input.primary_fire = match (input.fire, weapon_input.primary_fire.is_some()) {
             (true, true) => Some(InputState::Fired),

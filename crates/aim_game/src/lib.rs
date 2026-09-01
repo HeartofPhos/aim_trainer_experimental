@@ -4,8 +4,7 @@ use crate::{
         TimeFactor,
         auto_driver::AutoDriver,
         challenge::{
-            Challenge, ChallengeValue, CollectProfile, CollectableSensor, ScalableComponent,
-            challenge_bundle,
+            Challenge, ChallengeValue, CollectableSensor, ScalableComponent, challenge_bundle,
         },
         character_controller::{CharacterController, GroundDetection},
         health::{Health, health_bundle},

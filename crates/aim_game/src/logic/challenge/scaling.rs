@@ -102,7 +102,7 @@ impl Scalable for Shape {
                 let r = *radius;
 
                 #[rustfmt::skip]
-                let factor = ((-8.0 * f * h * r + 2.0 * PI * f * h * r + 16.0 * f * r * r + PI * PI * f * r * r - 8.0 * PI * f * r * r + h * h).sqrt() - h) / ((PI - 4.0) * r);
+                let factor = (ops::sqrt(-8.0 * f * h * r + 2.0 * PI * f * h * r + 16.0 * f * r * r + PI * PI * f * r * r - 8.0 * PI * f * r * r + h * h) - h) / ((PI - 4.0) * r);
 
                 *radius *= factor;
             }

@@ -403,11 +403,11 @@ fn facing(
             let wish_facing = (target.translation() - transform.translation()).normalize_or_zero();
             let current_facing = facing.forward();
 
-            let current_yaw = f32::atan2(current_facing.x, current_facing.z);
-            let wish_yaw = f32::atan2(wish_facing.x, wish_facing.z);
+            let current_yaw = ops::atan2(current_facing.x, current_facing.z);
+            let wish_yaw = ops::atan2(wish_facing.x, wish_facing.z);
 
-            let current_pitch = f32::asin(current_facing.y);
-            let wish_pitch = f32::asin(wish_facing.y);
+            let current_pitch = ops::asin(current_facing.y);
+            let wish_pitch = ops::asin(wish_facing.y);
 
             mi.yaw_delta = wish_yaw - current_yaw;
             mi.pitch_delta = wish_pitch - current_pitch;

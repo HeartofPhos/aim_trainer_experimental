@@ -24,6 +24,7 @@ pub fn fold<T>(opt: Option<T>, value: T, merge: impl Fn(T, T) -> T) -> T {
     opt.into_iter().fold(value, merge)
 }
 
+#[expect(unused)]
 pub trait Direction {
     const LEFT: Self;
     const RIGHT: Self;
