@@ -1,8 +1,10 @@
 use crate::{
-    GameRng, Player,
+    AimRng, Player,
     logic::{
         DriverSet, TimeFactor,
-        movement::{Facing, MovementInput, MovementProfile, SpeedThreshold, exclude_axes},
+        character::movement::{
+            Facing, MovementInput, MovementProfile, SpeedThreshold, exclude_axes,
+        },
     },
     utils::{Direction, weighted_random},
 };
@@ -169,7 +171,7 @@ fn unstick(
         &Collider,
         &CollisionLayers,
         &TimeFactor,
-        &mut GameRng,
+        &mut AimRng,
     )>,
     speed_threshold: SpeedThreshold,
     transform_query: Query<&GlobalTransform>,
@@ -275,7 +277,7 @@ fn dodge(
         &AutoDriver,
         &mut NetInput,
         &TimeFactor,
-        &mut GameRng,
+        &mut AimRng,
     )>,
 ) -> Result {
     for (mut driver_state, driver, mut net_input, time_factor, mut rng) in query {
@@ -321,7 +323,7 @@ fn impulse(
         &AutoDriver,
         &mut MovementInput,
         &TimeFactor,
-        &mut GameRng,
+        &mut AimRng,
     )>,
 ) {
     for (mut driver_state, driver, mut mi, time_factor, mut rng) in query {

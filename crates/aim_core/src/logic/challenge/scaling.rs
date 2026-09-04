@@ -2,7 +2,7 @@ use crate::{
     logic::{
         SpawnSet, TimeFactor,
         challenge::{Challenge, ChallengeSet},
-        movement::MovementProfile,
+        character::movement::MovementProfile,
         shape::Shape,
     },
     utils::Maybe,

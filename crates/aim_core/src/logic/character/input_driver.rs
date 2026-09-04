@@ -1,6 +1,6 @@
 use crate::{
     Input,
-    logic::{DriverSet, movement::MovementInput},
+    logic::{DriverSet, character::movement::MovementInput},
 };
 use bevy::prelude::*;
 

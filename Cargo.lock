@@ -21,7 +21,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "aim_game"
+name = "aim_bridge"
+version = "0.1.0"
+dependencies = [
+ "aim_core",
+ "bevy",
+ "schema",
+]
+
+[[package]]
+name = "aim_core"
 version = "0.1.0"
 dependencies = [
  "approx",
@@ -41,7 +50,7 @@ dependencies = [
 name = "aim_trainer"
 version = "0.1.0"
 dependencies = [
- "aim_game",
+ "aim_bridge",
  "bevy_math",
  "raylib",
  "ref_asset",

@@ -1,4 +1,7 @@
-use crate::{logic::TimeFactor, utils::Direction};
+use crate::{
+    logic::{CharacterControllerSet, TimeFactor},
+    utils::Direction,
+};
 use avian3d::{
     math::{AdjustPrecision, AsF32, Dir, Scalar, Vector},
     prelude::*,
@@ -10,7 +13,7 @@ pub fn plugin(app: &mut App) {
         FixedUpdate,
         (move_and_slide, update_grounded)
             .chain()
-            .in_set(super::CharacterControllerSet),
+            .in_set(CharacterControllerSet),
     );
 }
 

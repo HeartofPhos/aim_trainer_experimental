@@ -1,12 +1,8 @@
 use crate::{
     fill_bar::FillBarShader,
-    input::InputAggregator,
     light::{LightShader, LightType},
 };
-use aim_game::{
-    Game, Input, Render,
-    logic::{level::PrimitiveCache, shape::Shape},
-};
+use aim_bridge::prelude::*;
 use bevy_math::prelude::*;
 use raylib::prelude::*;
 use schema::{BrushDef, BrushTransform, Primitive};
@@ -16,7 +12,6 @@ use std::{
 };
 
 mod fill_bar;
-mod input;
 mod light;
 mod shader;
 
@@ -34,7 +29,12 @@ fn main() {
     let (scenario, _): (schema::Scenario, _) =
         ref_asset::io::read_file(scenario_path).expect("failed to load scenario");
 
-    let game = Game::new(scenario, time_step);
+    let mut bridge = AimBridge::new(AimCore {
+        scenario,
+        challenge: Default::default(),
+        timestep: time_step,
+        seed: [0; 8],
+    });
     let sensitivity_config = SensitivityConfig {
         sensitivity: 1.0,
         sensitivity_factor: 0.022,
@@ -95,7 +95,7 @@ fn main() {
 
     let fill_bar_mesh = build_quad(&thread);
 
-    let draw_brush = build_draw_brush(&thread, game.primitive_cache(), mat_a, mat_b);
+    let draw_brush = build_draw_brush(&thread, bridge.primitive_cache(), mat_a, mat_b);
 
     let mut camera = Camera3D::perspective(
         Vector3::ZERO, // Camera position
@@ -106,182 +106,145 @@ fn main() {
 
     rl.disable_cursor();
 
-    game_loop(
-        rl,
-        time_step,
-        game,
-        InputAggregator::default(),
-        |rl, game, input, elapsed, delta_time| {
-            game.update(delta_time, input.take());
-        },
-        |rl, game, input, elapsed, delta_time| {
-            fn dir(neg: bool, pos: bool) -> f32 {
-                match (neg, pos) {
-                    (true, false) => -1.0,
-                    (false, true) => 1.0,
-                    _ => 0.0,
-                }
-            }
-
-            input.push(Input {
-                look: Vec2::from(rl.get_mouse_delta())
-                    * sensitivity_config.sensitivity
-                    * sensitivity_config.sensitivity_factor,
-                movement: Vec3 {
-                    x: dir(
-                        rl.is_key_down(KeyboardKey::KEY_A),
-                        rl.is_key_down(KeyboardKey::KEY_D),
-                    ),
-                    y: dir(
-                        rl.is_key_down(KeyboardKey::KEY_LEFT_CONTROL),
-                        rl.is_key_down(KeyboardKey::KEY_SPACE),
-                    ),
-                    z: dir(
-                        rl.is_key_down(KeyboardKey::KEY_W),
-                        rl.is_key_down(KeyboardKey::KEY_S),
-                    ),
-                }
-                .normalize_or(Vec3::ZERO),
-                fire: rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT),
-            });
-
-            let mut d = rl.begin_drawing(&thread);
-            d.clear_background(Color::GRAY);
-
-            let Ok(camera_transform) = game.camera() else {
-                return;
-            };
-
-            camera.target =
-                (camera_transform.translation + camera_transform.rotation * Vec3::NEG_Z).into();
-            camera.position = camera_transform.translation.into();
-
-            light_shader.view_pos.set(camera.position);
-            light_shader.upload();
-
-            {
-                let mut c = d.begin_mode3D(camera);
-
-                game.level_brushes(|brush_def, brush_transform| {
-                    if matches!(
-                        brush_def,
-                        BrushDef::Primitive {
-                            theme: schema::ThemeToken::Invisible,
-                            ..
-                        } | BrushDef::Spawn { .. }
-                    ) {
-                        return;
-                    }
-
-                    draw_brush(&mut c, brush_def, brush_transform)
-                });
-
-                let color = Color::new(24, 24, 24, 255);
-                let resolution = 16;
-                game.shapes(|transform, shape, render, health| {
-                    match (shape, render) {
-                        (Shape::Sphere(shape), Render::Shape) => c.draw_sphere_ex(
-                            transform.translation,
-                            shape.radius,
-                            resolution,
-                            resolution,
-                            color,
-                        ),
-                        (Shape::Capsule(shape), Render::Shape) => c.draw_capsule(
-                            transform.translation - Vec3::new(0.0, shape.half_length, 0.0),
-                            transform.translation + Vec3::new(0.0, shape.half_length, 0.0),
-                            shape.radius,
-                            resolution,
-                            resolution,
-                            color,
-                        ),
-                        (Shape::Cylinder(shape), Render::Shape) => c.draw_cylinder(
-                            transform.translation - shape.half_height,
-                            shape.radius,
-                            shape.radius,
-                            shape.half_height * 2.0,
-                            resolution,
-                            color,
-                        ),
-                        (_, Render::Radius) => c.draw_circle3D(
-                            transform.translation + Vec3::new(0.0, -shape.extents().y, 0.0),
-                            shape.radius(),
-                            Vector3::X,
-                            90.0,
-                            Color::WHITE,
-                        ),
-                    }
-
-                    if let Some(health) = health {
-                        let scale = DEFAULT_FILL_BAR_SIZE;
-                        let offset = Vec3::new(0.0, shape.extents().y + scale.y * 0.5, 0.0)
-                            + FILL_BAR_OFFSET;
-
-                        fill_bar_shader.fill.set(health.ratio());
-                        fill_bar_shader.upload();
-
-                        c.draw_mesh(
-                            &fill_bar_mesh,
-                            fill_bar_mat.clone(),
-                            Mat4::from_scale_rotation_translation(
-                                scale,
-                                Quat::IDENTITY,
-                                transform.translation + offset,
-                            ),
-                        );
-                    }
-                });
-            }
-
-            d.draw_circle(
-                d.get_render_width() / 2,
-                d.get_render_height() / 2,
-                4.0,
-                Color::new(0, 255, 255, 255),
-            );
-
-            d.draw_fps(10, 10);
-            let challenge_text = format!("{:.2}", game.challenge());
-            let font_size = 20;
-            let m = d.measure_text(&challenge_text, font_size);
-            d.draw_text(
-                &challenge_text,
-                (d.get_screen_width() - m) / 2,
-                10,
-                font_size,
-                Color::WHITE,
-            );
-        },
-    );
-}
-
-fn game_loop<S, I>(
-    mut rl: RaylibHandle,
-    timestep: Duration,
-    mut state: S,
-    mut input_state: I,
-    mut integrate: impl FnMut(&mut RaylibHandle, &mut S, &mut I, Duration, Duration),
-    mut render: impl FnMut(&mut RaylibHandle, &S, &mut I, Duration, Duration),
-) {
-    let mut elapsed = Duration::ZERO;
-    let mut accumulator = Duration::ZERO;
-
-    let mut current_time = Instant::now();
-
     while !rl.window_should_close() {
-        let new_time = Instant::now();
-        let delta_time = new_time.duration_since(current_time);
-        current_time = new_time;
-
-        accumulator += delta_time;
-
-        while accumulator > timestep {
-            integrate(&mut rl, &mut state, &mut input_state, elapsed, timestep);
-            accumulator -= timestep;
-            elapsed += timestep;
+        fn dir(neg: bool, pos: bool) -> f32 {
+            match (neg, pos) {
+                (true, false) => -1.0,
+                (false, true) => 1.0,
+                _ => 0.0,
+            }
         }
 
-        render(&mut rl, &state, &mut input_state, elapsed, delta_time);
+        let input = Input {
+            look: Vec2::from(rl.get_mouse_delta())
+                * sensitivity_config.sensitivity
+                * sensitivity_config.sensitivity_factor,
+            movement: Vec3 {
+                x: dir(
+                    rl.is_key_down(KeyboardKey::KEY_A),
+                    rl.is_key_down(KeyboardKey::KEY_D),
+                ),
+                y: dir(
+                    rl.is_key_down(KeyboardKey::KEY_LEFT_CONTROL),
+                    rl.is_key_down(KeyboardKey::KEY_SPACE),
+                ),
+                z: dir(
+                    rl.is_key_down(KeyboardKey::KEY_W),
+                    rl.is_key_down(KeyboardKey::KEY_S),
+                ),
+            }
+            .normalize_or(Vec3::ZERO),
+            fire: rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT),
+        };
+
+        bridge.update(Duration::from_secs_f32(rl.get_frame_time()), input);
+
+        let mut d = rl.begin_drawing(&thread);
+        d.clear_background(Color::GRAY);
+
+        let Ok(camera_transform) = bridge.camera() else {
+            continue;
+        };
+
+        camera.target =
+            (camera_transform.translation + camera_transform.rotation * Vec3::NEG_Z).into();
+        camera.position = camera_transform.translation.into();
+
+        light_shader.view_pos.set(camera.position);
+        light_shader.upload();
+
+        {
+            let mut c = d.begin_mode3D(camera);
+
+            bridge.level_brushes(|brush_def, brush_transform| {
+                if matches!(
+                    brush_def,
+                    BrushDef::Primitive {
+                        theme: schema::ThemeToken::Invisible,
+                        ..
+                    } | BrushDef::Spawn { .. }
+                ) {
+                    return;
+                }
+
+                draw_brush(&mut c, brush_def, brush_transform)
+            });
+
+            let color = Color::new(24, 24, 24, 255);
+            let resolution = 16;
+            bridge.shapes(|transform, shape, render, health| {
+                match (shape, render) {
+                    (Shape::Sphere(shape), Render::Shape) => c.draw_sphere_ex(
+                        transform.translation,
+                        shape.radius,
+                        resolution,
+                        resolution,
+                        color,
+                    ),
+                    (Shape::Capsule(shape), Render::Shape) => c.draw_capsule(
+                        transform.translation - Vec3::new(0.0, shape.half_length, 0.0),
+                        transform.translation + Vec3::new(0.0, shape.half_length, 0.0),
+                        shape.radius,
+                        resolution,
+                        resolution,
+                        color,
+                    ),
+                    (Shape::Cylinder(shape), Render::Shape) => c.draw_cylinder(
+                        transform.translation - shape.half_height,
+                        shape.radius,
+                        shape.radius,
+                        shape.half_height * 2.0,
+                        resolution,
+                        color,
+                    ),
+                    (_, Render::Radius) => c.draw_circle3D(
+                        transform.translation + Vec3::new(0.0, -shape.extents().y, 0.0),
+                        shape.radius(),
+                        Vector3::X,
+                        90.0,
+                        Color::WHITE,
+                    ),
+                }
+
+                if let Some(health) = health {
+                    let scale = DEFAULT_FILL_BAR_SIZE;
+                    let offset =
+                        Vec3::new(0.0, shape.extents().y + scale.y * 0.5, 0.0) + FILL_BAR_OFFSET;
+
+                    fill_bar_shader.fill.set(health.ratio());
+                    fill_bar_shader.upload();
+
+                    c.draw_mesh(
+                        &fill_bar_mesh,
+                        fill_bar_mat.clone(),
+                        Mat4::from_scale_rotation_translation(
+                            scale,
+                            Quat::IDENTITY,
+                            transform.translation + offset,
+                        ),
+                    );
+                }
+            });
+        }
+
+        d.draw_circle(
+            d.get_render_width() / 2,
+            d.get_render_height() / 2,
+            4.0,
+            Color::new(0, 255, 255, 255),
+        );
+
+        d.draw_fps(10, 10);
+        let challenge_text = format!("{:.2}", bridge.challenge());
+        let font_size = 20;
+        let m = d.measure_text(&challenge_text, font_size);
+        d.draw_text(
+            &challenge_text,
+            (d.get_screen_width() - m) / 2,
+            10,
+            font_size,
+            Color::WHITE,
+        );
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::logic::{
     challenge::{ChallengeSet, buffer::BufferMultiplier},
-    movement::SpeedThreshold,
+    character::movement::SpeedThreshold,
 };
 use avian3d::prelude::*;
 use bevy::prelude::*;

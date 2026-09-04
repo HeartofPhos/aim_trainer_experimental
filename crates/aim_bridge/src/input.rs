@@ -1,13 +1,14 @@
-use bevy_math::prelude::*;
+use aim_core::Input;
+use bevy::prelude::*;
 
 #[derive(Default)]
 pub struct InputAggregator {
-    input: aim_game::Input,
+    input: Input,
     buffer_fire: bool,
 }
 
 impl InputAggregator {
-    pub fn push(&mut self, input: aim_game::Input) {
+    pub fn push(&mut self, input: Input) {
         self.input.look += input.look;
         self.input.movement = input.movement;
         self.input.fire = input.fire;
@@ -17,8 +18,8 @@ impl InputAggregator {
         }
     }
 
-    pub fn take(&mut self) -> aim_game::Input {
-        let output = aim_game::Input {
+    pub fn take(&mut self) -> Input {
+        let output = Input {
             look: self.input.look,
             movement: self.input.movement,
             fire: self.input.fire || self.buffer_fire,

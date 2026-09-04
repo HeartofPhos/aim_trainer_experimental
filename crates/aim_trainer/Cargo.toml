@@ -7,7 +7,7 @@ edition = "2024"
 bevy_math = { workspace = true }
 raylib = { workspace = true }
 
-aim_game = { path = "../aim_game" }
+aim_bridge = { path = "../aim_bridge" }
 schema = { path = "../schema" }
 ref_asset = { path = "../ref_asset" }
 

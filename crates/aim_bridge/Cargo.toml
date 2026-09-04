@@ -1,0 +1,13 @@
+[package]
+name = "aim_bridge"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { workspace = true }
+
+schema = { path = "../schema" }
+aim_core = { path = "../aim_core" }
+
+[lints]
+workspace = true

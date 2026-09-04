@@ -2,15 +2,17 @@ use crate::{
     layers::CollisionLayersExt,
     logic::{
         TimeFactor,
-        auto_driver::AutoDriver,
         challenge::{
             Challenge, ChallengeValue, CollectableSensor, ScalableComponent, challenge_bundle,
         },
-        character_controller::{CharacterController, GroundDetection},
-        health::{Health, health_bundle},
-        input_driver::InputDriver,
+        character::{
+            auto_driver::AutoDriver,
+            character_controller::{CharacterController, GroundDetection},
+            input_driver::InputDriver,
+            movement::{FacingOf, MovementProfile},
+        },
+        health::health_bundle,
         level::{BrushDef, PrimitiveCache},
-        movement::{FacingOf, MovementProfile},
         shape::Shape,
         spawn::{SpawnLookup, Spawned, Spawner},
         targeter::TargeterOf,
@@ -28,12 +30,8 @@ mod layers;
 pub mod logic;
 mod utils;
 
-pub struct Game {
-    app: App,
-}
-
 #[derive(Component)]
-struct Camera;
+pub struct Camera;
 
 #[derive(Component)]
 struct Player;
@@ -50,91 +48,42 @@ pub enum Render {
     Radius,
 }
 
-pub type GameRng = bevy_rand::prelude::WyRand;
+pub type AimRng = bevy_rand::prelude::WyRand;
 
-impl Game {
-    pub fn new(scenario: Scenario, time_step: Duration) -> Self {
+pub struct AimCore {
+    pub scenario: Scenario,
+    pub challenge: ChallengeValue,
+    pub timestep: Duration,
+    pub seed: <AimRng as rand::SeedableRng>::Seed,
+}
+
+impl AimCore {
+    pub fn build(self) -> App {
         let mut app = App::new();
 
         app.add_plugins(MinimalPlugins);
         app.add_plugins(LogPlugin::default());
         app.add_plugins(TransformPlugin);
-        app.insert_resource(Time::<Fixed>::from_duration(time_step));
+        app.insert_resource(Time::<Fixed>::from_duration(self.timestep));
         app.add_plugins(PhysicsPlugins::default());
-        app.add_plugins(EntropyPlugin::<GameRng>::with_seed([0; 8]));
+        app.add_plugins(EntropyPlugin::<AimRng>::with_seed(self.seed));
         app.add_plugins(logic::plugin);
 
         app.init_resource::<Time>();
         app.init_resource::<PrimitiveCache>();
         app.init_resource::<SpawnLookup>();
-        app.insert_resource(Challenge::new(ChallengeValue::default()));
+        app.insert_resource(Challenge::new(self.challenge));
+
+        let mut time = app.world_mut().resource_mut::<TimeUpdateStrategy>();
+        *time = TimeUpdateStrategy::ManualDuration(self.timestep);
 
         app.world_mut()
-            .run_system_once_with(load_scenario, scenario)
+            .run_system_once_with(load_scenario, self.scenario)
             .expect("failed to load scenario");
 
         app.finish();
 
-        Self { app }
-    }
-
-    pub fn primitive_cache(&self) -> &PrimitiveCache {
-        self.app.world().resource::<PrimitiveCache>()
-    }
-
-    pub fn level_brushes(&self, mut f: impl FnMut(&schema::BrushDef, &schema::BrushTransform)) {
-        let mut query = self
-            .app
-            .world()
-            .try_query::<(&BrushDef, &Transform)>()
-            .unwrap();
-
-        for (brush_def, transform) in query.iter(self.app.world()) {
-            f(
-                brush_def,
-                &schema::BrushTransform {
-                    translation: transform.translation,
-                    rotation: transform.rotation,
-                    scale: transform.scale,
-                },
-            );
-        }
-    }
-
-    pub fn update(&mut self, delta_time: Duration, input: Input) {
-        let mut time = self.app.world_mut().resource_mut::<TimeUpdateStrategy>();
-        *time = TimeUpdateStrategy::ManualDuration(delta_time);
-
-        self.app.insert_resource(input);
-
-        self.app.update();
-    }
-
-    pub fn camera(&self) -> Result<Transform> {
-        let transform = self
-            .app
-            .world()
-            .try_query_filtered::<&GlobalTransform, With<Camera>>()
-            .ok_or("failed query")?
-            .single(self.app.world())?;
-
-        Ok((*transform).into())
-    }
-
-    pub fn shapes(&self, mut f: impl FnMut(Transform, Shape, Render, Option<Health>)) {
-        let mut query = self
-            .app
-            .world()
-            .try_query_filtered::<(&GlobalTransform, &Shape, &Render, Option<&Health>), ()>()
-            .unwrap();
-
-        for (transform, shape, render, health) in query.iter(self.app.world()) {
-            f((*transform).into(), *shape, *render, health.copied());
-        }
-    }
-
-    pub fn challenge(&self) -> f32 {
-        self.app.world().resource::<Challenge>().value().log()
+        app
     }
 }
 

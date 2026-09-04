@@ -1,5 +1,5 @@
 use crate::{
-    GameRng, Transform,
+    AimRng, Transform,
     logic::{SpawnSet, shape::ShapeExtents},
     utils::weighted_random,
 };
@@ -50,7 +50,7 @@ impl SpawnLookup {
         &self,
         group: SpawnGroup,
         target_extents: Vec3,
-        rng: &mut GameRng,
+        rng: &mut AimRng,
     ) -> Option<(Vec3, Quat)> {
         let weighted_spawn = self.spawns.get(&group)?;
 
@@ -100,7 +100,7 @@ pub struct Spawned {
 fn spawner(
     mut commands: Commands,
     query: Query<(Entity, &Spawner, Option<&SpawnedList>)>,
-    mut global: Single<&mut GameRng, With<GlobalRng>>,
+    mut global: Single<&mut AimRng, With<GlobalRng>>,
 ) {
     for (spawner_entity, spawner, spawned_list) in query {
         let spawned_count = spawned_list.map(|x| x.entities().len()).unwrap_or(0);
@@ -121,7 +121,7 @@ fn move_to_spawn(
     mut commands: Commands,
     spawn_lookup: Res<SpawnLookup>,
     spawner_query: Query<&Spawner>,
-    query: Query<(Entity, &SpawnedBy, Option<&ShapeExtents>, &mut GameRng), With<MoveToSpawn>>,
+    query: Query<(Entity, &SpawnedBy, Option<&ShapeExtents>, &mut AimRng), With<MoveToSpawn>>,
 ) -> Result {
     for (entity, spawned_by, shape_extents, mut rng) in query {
         let extents = match shape_extents {

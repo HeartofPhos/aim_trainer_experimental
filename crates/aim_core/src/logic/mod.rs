@@ -2,13 +2,10 @@ use crate::logic::challenge::ChallengeSet;
 use avian3d::schedule::PhysicsSystems;
 use bevy::prelude::*;
 
-pub mod auto_driver;
 pub mod challenge;
-pub mod character_controller;
+pub mod character;
 pub mod health;
-pub mod input_driver;
 pub mod level;
-pub mod movement;
 pub mod shape;
 pub mod spawn;
 pub mod targeter;
@@ -16,13 +13,10 @@ pub mod team;
 pub mod weapon;
 
 pub fn plugin(app: &mut App) {
-    app.add_plugins(auto_driver::plugin);
-    app.add_plugins(character_controller::plugin);
     app.add_plugins(challenge::plugin);
+    app.add_plugins(character::plugin);
     app.add_plugins(health::plugin);
-    app.add_plugins(input_driver::plugin);
     app.add_plugins(level::plugin);
-    app.add_plugins(movement::plugin);
     app.add_plugins(shape::plugin);
     app.add_plugins(spawn::plugin);
     app.add_plugins(weapon::plugin);
