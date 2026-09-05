@@ -69,7 +69,6 @@ impl AimCore {
         app.add_plugins(EntropyPlugin::<AimRng>::with_seed(self.seed));
         app.add_plugins(logic::plugin);
 
-        app.init_resource::<Time>();
         app.init_resource::<PrimitiveCache>();
         app.init_resource::<SpawnLookup>();
         app.insert_resource(Challenge::new(self.challenge));
@@ -82,12 +81,13 @@ impl AimCore {
             .expect("failed to load scenario");
 
         app.finish();
+        app.cleanup();
 
         app
     }
 }
 
-#[derive(Resource, Default, Clone, Copy)]
+#[derive(Resource, Debug, Default, Clone, Copy, PartialEq)]
 pub struct Input {
     pub look: Vec2,
     pub movement: Vec3,

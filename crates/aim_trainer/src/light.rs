@@ -41,7 +41,7 @@ impl<const MAX_LIGHTS: usize> LightShader<MAX_LIGHTS> {
 
         let mut lights = [LightLoc::default(); MAX_LIGHTS];
 
-        for i in 0..MAX_LIGHTS {
+        (0..MAX_LIGHTS).for_each(|i| {
             lights[i] = LightLoc {
                 enabled: ShaderLoc::new(&shader, &format!("lights[{}].enabled", i)),
                 ty: ShaderLoc::new(&shader, &format!("lights[{}].type", i)),
@@ -49,7 +49,7 @@ impl<const MAX_LIGHTS: usize> LightShader<MAX_LIGHTS> {
                 target: ShaderLoc::new(&shader, &format!("lights[{}].target", i)),
                 color: ShaderLoc::new(&shader, &format!("lights[{}].color", i)),
             };
-        }
+        });
 
         Self {
             view_pos: ShaderLoc::new(&shader, "viewPos"),

@@ -6,10 +6,7 @@ use aim_bridge::prelude::*;
 use bevy_math::prelude::*;
 use raylib::prelude::*;
 use schema::{BrushDef, BrushTransform, Primitive};
-use std::{
-    collections::HashMap,
-    time::{Duration, Instant},
-};
+use std::{collections::HashMap, time::Duration};
 
 mod fill_bar;
 mod light;
@@ -25,7 +22,7 @@ const FILL_BAR_OFFSET: Vec3 = Vec3::new(0.0, 0.05, 0.0);
 
 fn main() {
     let time_step = Duration::from_secs_f32(1.0 / 256.0);
-    let scenario_path = ref_asset::paths::scenario("track-move");
+    let scenario_path = ref_asset::paths::scenario("flick-static-move");
     let (scenario, _): (schema::Scenario, _) =
         ref_asset::io::read_file(scenario_path).expect("failed to load scenario");
 
@@ -36,7 +33,7 @@ fn main() {
         seed: [0; 8],
     });
     let sensitivity_config = SensitivityConfig {
-        sensitivity: 1.0,
+        sensitivity: 0.7,
         sensitivity_factor: 0.022,
     };
 
@@ -234,17 +231,24 @@ fn main() {
             Color::new(0, 255, 255, 255),
         );
 
+        fn draw_text_center(d: &mut RaylibDrawHandle, text: &str, font_size: i32, height: i32) {
+            let m = d.measure_text(text, font_size);
+            d.draw_text(
+                text,
+                (d.get_screen_width() - m) / 2,
+                height,
+                font_size,
+                Color::WHITE,
+            );
+        }
+
         d.draw_fps(10, 10);
-        let challenge_text = format!("{:.2}", bridge.challenge());
+
+        let challenge = bridge.challenge();
+        let challenge_text = format!("{:.2}", challenge.log());
+
         let font_size = 20;
-        let m = d.measure_text(&challenge_text, font_size);
-        d.draw_text(
-            &challenge_text,
-            (d.get_screen_width() - m) / 2,
-            10,
-            font_size,
-            Color::WHITE,
-        );
+        draw_text_center(&mut d, &challenge_text, font_size, 10);
     }
 }
 

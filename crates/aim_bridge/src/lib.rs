@@ -1,4 +1,5 @@
 use crate::input::InputAggregator;
+use aim_core::logic::challenge::ChallengeValue;
 pub use aim_core::{
     AimCore, Camera, Input, Render,
     logic::{
@@ -105,7 +106,7 @@ impl AimBridge {
         }
     }
 
-    pub fn challenge(&self) -> f32 {
-        self.app.world().resource::<Challenge>().value().log()
+    pub fn challenge(&self) -> ChallengeValue {
+        self.app.world().resource::<Challenge>().value()
     }
 }
